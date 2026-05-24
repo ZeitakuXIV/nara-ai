@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -13,7 +14,8 @@ import {
   Save, 
   RotateCcw,
   ArrowLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 
 export default function Profile() {
@@ -24,6 +26,7 @@ export default function Profile() {
   const [location, setLocation] = useState('Jakarta Selatan');
   const [goal, setGoal] = useState('bulking');
   const [allergies, setAllergies] = useState(['Seafood', 'Dairy']);
+  const router = useRouter();
 
   const commonAllergies = ['Peanuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Seafood', 'Shellfish', 'Tree Nuts'];
 
@@ -200,10 +203,16 @@ export default function Profile() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4 pt-6">
-           <button className="btn-primary flex items-center justify-center gap-2 py-5">
+           <button 
+             onClick={() => router.push('/dashboard')}
+             className="btn-primary flex items-center justify-center gap-2 py-5"
+           >
               <Save size={20} /> Save Changes
            </button>
-           <button className="flex items-center justify-center gap-2 text-nara-hunter font-bold text-sm hover:underline py-2">
+           <button 
+             onClick={() => router.push('/onboarding')}
+             className="flex items-center justify-center gap-2 text-nara-hunter font-bold text-sm hover:underline py-2"
+           >
               <RotateCcw size={16} /> Recalculate Profile from Zero
            </button>
         </div>
@@ -212,13 +221,13 @@ export default function Profile() {
 
       {/* Re-use Bottom Nav */}
       <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around px-4 z-50">
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter transition-colors" onClick={() => window.location.href='/dashboard'}>
+         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter transition-colors" onClick={() => router.push('/dashboard')}>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
                <Target size={22} />
             </div>
             <span className="text-[10px] font-bold uppercase tracking-widest">Plan</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter transition-colors" onClick={() => window.location.href='/chat'}>
+         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter transition-colors" onClick={() => router.push('/chat')}>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
                <MessageSquare size={22} />
             </div>

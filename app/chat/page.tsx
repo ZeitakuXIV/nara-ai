@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, 
@@ -11,7 +12,10 @@ import {
   User,
   MoreVertical,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  Calendar,
+  MessageSquare,
+  Target
 } from 'lucide-react';
 
 // Mock chat history for demonstration
@@ -42,6 +46,7 @@ export default function Chatbot() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -85,7 +90,7 @@ export default function Chatbot() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden pb-24">
       
       {/* Mesh Background */}
       <div className="absolute top-0 left-0 w-full h-full bg-mesh-gradient opacity-30 pointer-events-none" />
@@ -221,6 +226,27 @@ export default function Chatbot() {
         </p>
       </div>
 
+      {/* Bottom Navigation - Mobile First */}
+      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around px-4 z-50">
+         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/dashboard')}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
+               <Calendar size={22} />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Plan</span>
+         </button>
+         <button className="flex flex-col items-center gap-1 text-nara-hunter">
+            <div className="w-12 h-12 bg-nara-hunter/10 rounded-2xl flex items-center justify-center">
+               <MessageSquare size={22} fill="currentColor" className="opacity-80" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Chat</span>
+         </button>
+         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/profile')}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
+               <User size={22} />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+         </button>
+      </nav>
     </div>
   );
 }

@@ -1,11 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, User, Activity, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
+  const router = useRouter();
+
+  // Handle final transition
+  useEffect(() => {
+    if (step > 4) {
+      const timer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 4000); // 4 seconds of "Reasoning" animation
+      return () => clearTimeout(timer);
+    }
+  }, [step, router]);
   
   // Form State
   const [gender, setGender] = useState<'male' | 'female' | null>(null);

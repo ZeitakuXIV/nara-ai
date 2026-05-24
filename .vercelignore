@@ -1,0 +1,14 @@
+# Jangan upload folder riset dan dataset ke Vercel
+ai-engine/
+datasets/
+LOGO/
+*.jpeg
+*.pdf
+*.csv
+*.py
+*.json
+
+# Standar ignore
+node_modules
+.next
+.git

@@ -1,11 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Apple, ShieldCheck } from 'lucide-react';
 
 export default function AppEntry() {
   const [isLogin, setIsLogin] = useState(false);
+  const router = useRouter();
+
+  const handleAuthAction = () => {
+    // For now, any auth action leads to onboarding
+    router.push('/onboarding');
+  };
 
   return (
     <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 relative overflow-hidden bg-mesh-gradient">
@@ -64,7 +71,7 @@ export default function AppEntry() {
                 <div className="text-right">
                   <span className="text-sm text-nara-hunter font-bold cursor-pointer hover:text-nara-hunter-light transition-colors">Forgot password?</span>
                 </div>
-                <button className="btn-primary mt-2 group">
+                <button onClick={handleAuthAction} className="btn-primary mt-2 group">
                   Sign In <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </motion.div>
@@ -86,7 +93,7 @@ export default function AppEntry() {
                   <input type="email" placeholder="Email address" className="app-input" />
                   <input type="password" placeholder="Create password" className="app-input" />
                 </div>
-                <button className="btn-primary mt-2 group">
+                <button onClick={handleAuthAction} className="btn-primary mt-2 group">
                   Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </motion.div>
