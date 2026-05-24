@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { 
   Calendar, 
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-// Mock Data
 const MOCK_MEAL_PLAN = [
   { 
     day: 'Monday', 
@@ -34,6 +33,21 @@ const MOCK_MEAL_PLAN = [
           { name: 'Beras Merah Lokal', qty: '125g' },
           { name: 'Dada Ayam Kampung', qty: '110g' },
           { name: 'Minyak Wijen', qty: '5ml' }
+        ]
+      },
+      {
+        type: 'Lunch',
+        title: 'Pepes Ikan Kembung',
+        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop',
+        calories: 520,
+        protein: 38,
+        carbs: 20,
+        fat: 12,
+        scaling_reason: 'Utilized Ikan Kembung for high Omega-3. Portion scaled to maintain calorie deficit.',
+        ingredients: [
+          { name: 'Ikan Kembung', qty: '150g' },
+          { name: 'Tahu Putih', qty: '50g' },
+          { name: 'Daun Kemangi', qty: '10g' }
         ]
       }
     ]
@@ -62,11 +76,8 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden safe-top">
+    <div className="flex-1 flex flex-col h-[100dvh] relative overflow-hidden pt-[env(safe-area-inset-top,0px)]">
       
-      {/* Mesh Background */}
-      <div className="absolute top-0 right-0 w-full h-[400px] bg-mesh-gradient opacity-60 pointer-events-none" />
-
       {/* Top Bar */}
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
@@ -97,26 +108,47 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Current Meal Display */}
+        {/* Carousel of Meals */}
+        <div className="space-y-4">
+           <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Utensils size={14} /> Recommended Meals
+              </h2>
+           </div>
+
+           {selectedDay.meals.length > 0 ? (
+             <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
+                {selectedDay.meals.map((meal, idx) => (
+                   <motion.button
+                     key={idx}
+                     onClick={() => setActiveMealIndex(idx)}
+                     whileTap={{ scale: 0.98 }}
+                     className={`relative min-w-[280px] h-[360px] rounded-[40px] overflow-hidden shadow-soft border-4 transition-all ${
+                        activeMealIndex === idx ? 'border-nara-hunter' : 'border-transparent'
+                     }`}
+                   >
+                      <Image src={meal.image} alt={meal.title} fill className="object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute top-6 left-6 flex gap-2">
+                         <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-[10px] text-white font-bold uppercase">{meal.type}</div>
+                         <div className="bg-nara-hunter/80 backdrop-blur-md px-3 py-1 rounded-full border border-nara-hunter/40 text-[10px] text-white font-bold">{meal.calories} KCAL</div>
+                      </div>
+                      <div className="absolute bottom-8 left-8 right-8 text-left">
+                         <h3 className="text-white text-2xl font-black leading-tight mb-2">{meal.title}</h3>
+                      </div>
+                   </motion.button>
+                ))}
+             </div>
+           ) : (
+             <div className="h-[200px] glass-container flex flex-col items-center justify-center text-center p-8">
+                <Zap className="text-nara-hunter animate-pulse mb-4" size={32} />
+                <h3 className="text-lg font-bold">Optimizing Day {selectedDay.id}</h3>
+             </div>
+           )}
+        </div>
+
         {currentMeal && (
           <div className="space-y-6">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative h-[280px] rounded-[32px] overflow-hidden shadow-float">
-                <Image 
-                  src={currentMeal.image} 
-                  alt={currentMeal.title} 
-                  fill
-                  className="object-cover" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute top-4 left-4 flex gap-2">
-                    <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-[9px] text-white font-bold uppercase">{currentMeal.type}</div>
-                    <div className="bg-nara-hunter/80 backdrop-blur-md px-3 py-1 rounded-full border border-nara-hunter/40 text-[9px] text-white font-bold">{currentMeal.calories} KCAL</div>
-                </div>
-                <div className="absolute bottom-6 left-6 right-6">
-                    <h3 className="text-white text-xl font-black leading-tight">{currentMeal.title}</h3>
-                </div>
-            </motion.div>
-
             <div className="glass-container p-6 grid grid-cols-2 gap-4">
                <div className="flex flex-col justify-center">
                   <h3 className="text-sm font-black text-nara-text mb-4 uppercase tracking-wider">Macros</h3>
@@ -150,12 +182,23 @@ export default function Dashboard() {
                </div>
                <p className="text-white/80 text-xs leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </div>
+
+            <div className="glass-container p-6">
+               <h3 className="text-sm font-black text-nara-text mb-4 uppercase tracking-wider">Scaled Ingredients</h3>
+               <div className="space-y-3">
+                  {currentMeal.ingredients.map((ing, i) => (
+                     <div key={i} className="flex items-center justify-between p-3 bg-white/40 rounded-xl border border-white/80">
+                        <span className="text-xs font-bold text-nara-text">{ing.name}</span>
+                        <span className="text-[10px] font-black text-nara-hunter bg-white px-2 py-0.5 rounded-lg">{ing.qty}</span>
+                     </div>
+                  ))}
+               </div>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Industrial Nav Bar with High-Hitbox Affordance */}
-      <nav className="fixed bottom-0 left-0 right-0 h-[calc(80px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
          <Link href="/dashboard" className="nav-hitbox text-nara-hunter">
             <Calendar size={24} fill="currentColor" />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Plan</span>

@@ -12,33 +12,29 @@
 }
 
 @layer base {
-  /* Industrial background fill for iOS - Set to Hunter Green to eliminate white bars */
-  html {
-    background-color: var(--nara-hunter);
+  html, body {
+    @apply antialiased font-sans text-nara-text;
+    background-color: var(--nara-light);
     height: 100%;
-    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
   }
 
-  body {
-    @apply text-nara-text font-sans antialiased;
+  /* Fixed Background Layer to prevent white bars during rubber-banding */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
     background-color: var(--nara-light);
     background-image: 
       radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%), 
       radial-gradient(at 100% 0%, rgba(61, 100, 77, 0.15) 0px, transparent 50%),
       radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.5) 0px, transparent 80%);
-    background-attachment: fixed;
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    margin: 0;
-  }
-
-  /* Safe Area content handling */
-  .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -56,22 +52,28 @@
     @apply w-full text-white rounded-2xl px-6 py-4 font-bold text-[17px] tracking-tight transition-all active:scale-[0.96] shadow-[0_10px_20px_-2px_rgba(61,100,77,0.3)] flex justify-center items-center gap-2;
   }
 
-  /* Improved High-Affordance Nav Button */
+  .btn-secondary {
+    @apply w-full bg-white/60 backdrop-blur-md text-nara-text border border-white/80 rounded-2xl px-6 py-4 font-bold text-[17px] tracking-tight transition-all active:scale-[0.96] hover:bg-white/80 flex justify-center items-center gap-2 shadow-sm;
+  }
+
   .nav-hitbox {
-    @apply flex-1 flex flex-col items-center justify-center h-full w-full transition-all active:bg-nara-hunter/5 cursor-pointer touch-manipulation relative z-50;
+    @apply flex-1 flex flex-col items-center justify-center h-full w-full transition-all active:scale-90 cursor-pointer touch-manipulation;
     -webkit-tap-highlight-color: transparent;
   }
 
   .text-glow {
     @apply drop-shadow-[0_0_15px_rgba(16,185,129,0.3)];
   }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s infinite;
+  }
 }
 
-/* Hide scrollbars */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.01); }
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
