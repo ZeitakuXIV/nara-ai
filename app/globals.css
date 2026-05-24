@@ -12,44 +12,46 @@
 }
 
 @layer base {
-  /* THE ONLY WAY TO KILL WHITE BARS ON IOS:
-     Apply background to HTML directly. */
+  /* DEFINITIVE IOS FIX: Use 100dvh and apply background to HTML root */
   html {
     background-color: var(--nara-light);
-    height: 100%;
-    width: 100%;
+    height: 100dvh;
+    width: 100vw;
     overflow: hidden;
-  }
-
-  body {
-    @apply text-nara-text font-sans antialiased;
-    background-color: var(--nara-light);
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-  }
-
-  /* Fixed Background Layer for Mesh Gradient */
-  .pwa-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
+    /* Apply the mesh gradient globally to HTML to cover notch/safe areas */
     background-image: 
       radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%), 
       radial-gradient(at 100% 0%, rgba(61, 100, 77, 0.15) 0px, transparent 50%),
       radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.5) 0px, transparent 80%);
-    pointer-events: none;
+    background-attachment: fixed;
+  }
+
+  body {
+    @apply text-nara-text font-sans antialiased;
+    height: 100dvh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent; /* Let HTML background show through */
+  }
+
+  /* Universal container for internal scrolling without breaking app-feel */
+  .app-content {
+    @apply flex-1 w-full flex flex-col overflow-y-auto no-scrollbar relative;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
 @layer components {
+  /* Enhanced Glassmorphism */
   .glass-container {
-    @apply bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)];
+    @apply bg-white/40 backdrop-blur-[20px] border border-white/60 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)];
+  }
+
+  .glass-card {
+    @apply bg-white/60 backdrop-blur-[12px] border border-white/80 rounded-3xl shadow-sm;
   }
 
   .app-input {
@@ -65,16 +67,25 @@
     @apply w-full bg-white/60 backdrop-blur-md text-nara-text border border-white/80 rounded-2xl px-6 py-4 font-bold text-[17px] tracking-tight transition-all active:scale-[0.96] hover:bg-white/80 flex justify-center items-center gap-2 shadow-sm;
   }
 
+  /* High Affordance Navigation Hitbox */
   .nav-hitbox {
-    @apply flex-1 flex flex-col items-center justify-center h-full w-full transition-all active:scale-90 cursor-pointer touch-manipulation;
+    @apply flex-1 flex flex-col items-center justify-center h-full w-full transition-all active:scale-95 active:opacity-60 cursor-pointer touch-manipulation relative;
     -webkit-tap-highlight-color: transparent;
   }
 
   .text-glow {
     @apply drop-shadow-[0_0_15px_rgba(16,185,129,0.3)];
   }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s infinite;
+  }
 }
 
-/* Utilities */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.01); }
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

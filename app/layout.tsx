@@ -27,10 +27,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-nara-light overflow-hidden">
-      <body className="font-sans antialiased bg-nara-light">
-        {/* We remove the global nav here because an App typically doesn't have a web-style nav on the Auth screen */}
-        <main className="h-[100dvh] flex flex-col overflow-hidden">
+    <html lang="en">
+      <body className="font-sans antialiased">
+        {/* Global Animated Background Blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
+          <div className="absolute top-1/4 left-1/4 w-[50vw] h-[50vw] bg-nara-emerald/10 rounded-full mix-blend-multiply filter blur-[80px] animate-blob" />
+          <div className="absolute top-1/3 right-1/4 w-[40vw] h-[40vw] bg-nara-hunter/10 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-2000" />
+          <div className="absolute bottom-1/4 left-1/3 w-[60vw] h-[60vw] bg-nara-emerald/5 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-4000" />
+        </div>
+
+        <main className="h-[100dvh] w-full flex flex-col relative overflow-hidden">
           {children}
         </main>
       </body>
