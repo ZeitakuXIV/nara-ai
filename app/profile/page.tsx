@@ -13,11 +13,12 @@ import {
   ShieldAlert, 
   Save, 
   RotateCcw,
-  MessageSquare
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 
 export default function Profile() {
-  // Mock Initial State (Simulating data from Onboarding)
+  // Mock Initial State
   const [weight, setWeight] = useState(65);
   const [height, setHeight] = useState(170);
   const [age, setAge] = useState(24);
@@ -28,7 +29,6 @@ export default function Profile() {
 
   const commonAllergies = ['Peanuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Seafood', 'Shellfish', 'Tree Nuts'];
 
-  // BMI Calculation
   const bmi = useMemo(() => {
     const heightInMeters = height / 100;
     return parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
@@ -41,12 +41,12 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] pb-32 relative overflow-hidden pt-[env(safe-area-inset-top,0px)]">
+    <div className="flex-1 flex flex-col bg-nara-light h-full relative overflow-hidden">
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-full h-[300px] bg-mesh-gradient opacity-40 pointer-events-none" />
 
       {/* Header */}
-      <header className="px-6 pt-12 pb-6 flex items-center justify-between z-10">
+      <header className="px-6 pt-12 pb-6 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-4">
            <h1 className="text-2xl font-black text-nara-text tracking-tight">Health Identity</h1>
         </div>
@@ -55,7 +55,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <main className="px-6 space-y-6 z-10 max-w-md mx-auto w-full overflow-y-auto no-scrollbar pb-10">
+      <main className="px-6 space-y-6 z-10 max-w-md mx-auto w-full overflow-y-auto no-scrollbar pb-32">
         
         {/* BMI & Stats Overview Card */}
         <div className="glass-container p-6 flex items-center justify-between bg-gradient-to-br from-white/60 to-nara-emerald/5">
@@ -80,7 +80,6 @@ export default function Profile() {
         <section className="space-y-4">
            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest px-1">Physical Metrics</h2>
            <div className="grid grid-cols-1 gap-4">
-              {/* Weight & Height Row */}
               <div className="flex gap-4">
                  <div className="flex-1 bg-white/70 backdrop-blur-md p-5 rounded-[32px] border border-white/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-3 text-nara-muted">
@@ -112,7 +111,6 @@ export default function Profile() {
                  </div>
               </div>
               
-              {/* Age & Location Row */}
               <div className="bg-white/70 backdrop-blur-md p-5 rounded-[32px] border border-white/80 shadow-sm flex items-center justify-between">
                  <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-2xl bg-nara-hunter/10 flex items-center justify-center text-nara-hunter">
@@ -214,28 +212,21 @@ export default function Profile() {
 
       </main>
 
-      {/* Re-use Bottom Nav */}
-      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around px-4 z-50">
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter transition-colors" onClick={() => router.push('/dashboard')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-               <Target size={22} />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Plan</span>
+      {/* Industrial Nav Bar with High-Hitbox Affordance */}
+      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-stretch justify-around px-2 z-50 overflow-hidden">
+         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/dashboard')}>
+            <Calendar size={22} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter transition-colors" onClick={() => router.push('/chat')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-               <MessageSquare size={22} />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Chat</span>
+         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/chat')}>
+            <MessageSquare size={22} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-nara-hunter">
-            <div className="w-12 h-12 bg-nara-hunter/10 rounded-2xl flex items-center justify-center">
-               <User size={22} fill="currentColor" className="opacity-80" />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+         <button className="nav-hitbox text-nara-hunter" onClick={() => {}}>
+            <User size={22} fill="currentColor" className="opacity-80" />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
          </button>
       </nav>
-
     </div>
   );
 }

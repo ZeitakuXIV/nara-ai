@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
-// Mock Data representing what the AI would return
+// Mock Data
 const MOCK_MEAL_PLAN = [
   { 
     day: 'Monday', 
@@ -75,13 +75,13 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] pb-24 relative overflow-hidden pt-[env(safe-area-inset-top,0px)]">
+    <div className="flex-1 flex flex-col bg-nara-light h-full relative overflow-hidden">
       
       {/* Mesh Background */}
       <div className="absolute top-0 right-0 w-full h-[400px] bg-mesh-gradient opacity-60 pointer-events-none" />
 
       {/* Top Bar */}
-      <header className="px-6 pt-12 pb-6 flex justify-between items-end z-10">
+      <header className="px-6 pt-12 pb-6 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-xs font-bold text-nara-hunter uppercase tracking-[0.2em] mb-1">Act Layer • Meal Plan</p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Daily Nutrition</h1>
@@ -91,7 +91,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="px-6 flex-1 z-10 space-y-6 overflow-y-auto no-scrollbar pb-10">
+      <main className="px-6 flex-1 z-10 space-y-6 overflow-y-auto no-scrollbar pb-32">
         {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-4">
           {MOCK_MEAL_PLAN.map((d) => (
@@ -209,24 +209,19 @@ export default function Dashboard() {
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around px-4 z-50">
-         <button className="flex flex-col items-center gap-1 text-nara-hunter">
-            <div className="w-12 h-12 bg-nara-hunter/10 rounded-2xl flex items-center justify-center">
-               <Calendar size={22} fill="currentColor" />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Plan</span>
+      {/* Industrial Nav Bar with High-Hitbox Affordance */}
+      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-stretch justify-around px-2 z-50 overflow-hidden">
+         <button className="nav-hitbox text-nara-hunter" onClick={() => {}}>
+            <Calendar size={22} fill="currentColor" />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/chat')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-               <MessageSquare size={22} />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Chat</span>
+         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/chat')}>
+            <MessageSquare size={22} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/profile')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-               <User size={22} />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/profile')}>
+            <User size={22} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
          </button>
       </nav>
     </div>

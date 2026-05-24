@@ -13,7 +13,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 
-// Mock chat history for demonstration
+// Mock chat history
 const INITIAL_MESSAGES = [
   {
     id: 1,
@@ -63,7 +63,6 @@ export default function Chatbot() {
     setMessages([...messages, newUserMsg]);
     setInputValue('');
     
-    // Simulate AI thinking
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
@@ -85,13 +84,13 @@ export default function Chatbot() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden pb-24 pt-[env(safe-area-inset-top,0px)]">
+    <div className="flex-1 flex flex-col bg-nara-light h-full relative overflow-hidden">
       
       {/* Mesh Background */}
       <div className="absolute top-0 left-0 w-full h-full bg-mesh-gradient opacity-30 pointer-events-none" />
 
       {/* Chat Header */}
-      <header className="nav-blur px-6 py-4 flex items-center justify-between z-20">
+      <header className="nav-blur px-6 py-4 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-nara-hunter rounded-2xl flex items-center justify-center shadow-soft relative">
@@ -115,7 +114,7 @@ export default function Chatbot() {
       {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 z-10 no-scrollbar"
+        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 z-10 no-scrollbar pb-32"
       >
         <div className="text-center mb-8">
            <span className="px-4 py-1.5 rounded-full bg-white/50 border border-white/80 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Today • May 24</span>
@@ -172,7 +171,7 @@ export default function Chatbot() {
       </div>
 
       {/* Input Section */}
-      <div className="p-6 bg-white/40 backdrop-blur-2xl border-t border-white/60 z-20">
+      <div className="p-6 bg-white/40 backdrop-blur-2xl border-t border-white/60 z-20 shrink-0 pb-32">
         {/* Quick Actions */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
            {quickActions.map((action, i) => (
@@ -196,7 +195,7 @@ export default function Chatbot() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask NARA about your diet..."
+              placeholder="Ask NARA..."
               className="w-full bg-white border border-slate-100 rounded-[20px] px-5 py-3.5 pr-12 text-[15px] focus:outline-none focus:border-nara-hunter shadow-sm transition-all"
             />
             <button 
@@ -209,31 +208,21 @@ export default function Chatbot() {
             </button>
           </div>
         </div>
-        
-        <p className="mt-4 text-center text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em]">
-           Hybrid Reasoning Engine v2.0
-        </p>
       </div>
 
-      {/* Bottom Navigation - Mobile First */}
-      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-around px-4 z-50">
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/dashboard')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-               <Calendar size={22} />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Plan</span>
+      {/* Industrial Nav Bar with High-Hitbox Affordance */}
+      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-stretch justify-around px-2 z-50 overflow-hidden">
+         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/dashboard')}>
+            <Calendar size={22} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-nara-hunter">
-            <div className="w-12 h-12 bg-nara-hunter/10 rounded-2xl flex items-center justify-center">
-               <MessageSquare size={22} fill="currentColor" className="opacity-80" />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Chat</span>
+         <button className="nav-hitbox text-nara-hunter" onClick={() => {}}>
+            <MessageSquare size={22} fill="currentColor" className="opacity-80" />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
          </button>
-         <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/profile')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
-               <User size={22} />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/profile')}>
+            <User size={22} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
          </button>
       </nav>
     </div>
