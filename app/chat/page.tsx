@@ -9,7 +9,6 @@ import {
   User,
   MoreVertical,
   Plus,
-  ArrowLeft,
   Calendar,
   MessageSquare
 } from 'lucide-react';
@@ -86,7 +85,7 @@ export default function Chatbot() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden pb-24">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden pb-24 pt-[env(safe-area-inset-top,0px)]">
       
       {/* Mesh Background */}
       <div className="absolute top-0 left-0 w-full h-full bg-mesh-gradient opacity-30 pointer-events-none" />

@@ -75,7 +75,7 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light min-h-screen pb-24 relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] pb-24 relative overflow-hidden pt-[env(safe-area-inset-top,0px)]">
       
       {/* Mesh Background */}
       <div className="absolute top-0 right-0 w-full h-[400px] bg-mesh-gradient opacity-60 pointer-events-none" />
@@ -91,31 +91,31 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Day Selector */}
-      <div className="flex gap-3 px-6 overflow-x-auto no-scrollbar py-4 z-10">
-        {MOCK_MEAL_PLAN.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => {
-              setSelectedDay(d);
-              setActiveMealIndex(0);
-            }}
-            className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-3xl transition-all duration-300 border ${
-              selectedDay.id === d.id 
-              ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' 
-              : 'bg-white/60 text-nara-muted border-white/80'
-            }`}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">{d.day.substring(0, 3)}</span>
-            <span className="text-lg font-black">{d.id}</span>
-            {selectedDay.id === d.id && (
-               <motion.div layoutId="dot" className="w-1 h-1 bg-white rounded-full mt-1" />
-            )}
-          </button>
-        ))}
-      </div>
+      <main className="px-6 flex-1 z-10 space-y-6 overflow-y-auto no-scrollbar pb-10">
+        {/* Day Selector */}
+        <div className="flex gap-3 overflow-x-auto no-scrollbar py-4">
+          {MOCK_MEAL_PLAN.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => {
+                setSelectedDay(d);
+                setActiveMealIndex(0);
+              }}
+              className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-3xl transition-all duration-300 border ${
+                selectedDay.id === d.id 
+                ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' 
+                : 'bg-white/60 text-nara-muted border-white/80'
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">{d.day.substring(0, 3)}</span>
+              <span className="text-lg font-black">{d.id}</span>
+              {selectedDay.id === d.id && (
+                 <motion.div layoutId="dot" className="w-1 h-1 bg-white rounded-full mt-1" />
+              )}
+            </button>
+          ))}
+        </div>
 
-      <main className="px-6 flex-1 z-10 space-y-6">
         {/* Recommended Meals */}
         <div className="space-y-4">
            <div className="flex items-center justify-between px-1">

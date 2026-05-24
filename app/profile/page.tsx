@@ -13,7 +13,6 @@ import {
   ShieldAlert, 
   Save, 
   RotateCcw,
-  ArrowLeft,
   MessageSquare
 } from 'lucide-react';
 
@@ -42,7 +41,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light min-h-screen pb-32 relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] pb-32 relative overflow-hidden pt-[env(safe-area-inset-top,0px)]">
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-full h-[300px] bg-mesh-gradient opacity-40 pointer-events-none" />
 
@@ -56,7 +55,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <main className="px-6 space-y-6 z-10 max-w-md mx-auto w-full">
+      <main className="px-6 space-y-6 z-10 max-w-md mx-auto w-full overflow-y-auto no-scrollbar pb-10">
         
         {/* BMI & Stats Overview Card */}
         <div className="glass-container p-6 flex items-center justify-between bg-gradient-to-br from-white/60 to-nara-emerald/5">
