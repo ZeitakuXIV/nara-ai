@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { AnimatePresence } from 'framer-motion';
-import { Send, User, MoreVertical, Plus, Calendar, MessageSquare } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Send, User, MoreVertical, Plus, Calendar, MessageSquare, ShieldCheck } from 'lucide-react';
 
 const INITIAL_MESSAGES = [
   { id: 1, sender: 'nara', text: "Hello! I'm NARA, your Nutrition Agent. How can I help you today?", timestamp: '09:00' },
@@ -30,53 +30,98 @@ export default function Chatbot() {
     <div className="app-content bg-nara-light">
       <div className="pwa-bg" />
       
-      <header className="px-6 pt-[env(safe-area-inset-top,1.5rem)] pb-4 flex items-center justify-between z-20 shrink-0 bg-white/20 backdrop-blur-md">
+      {/* Header */}
+      <header className="px-6 pt-[env(safe-area-inset-top,1.5rem)] pb-4 flex items-center justify-between z-20 shrink-0 bg-white/10 backdrop-blur-md border-b border-white/20">
         <div className="flex items-center gap-3">
-           <div className="w-10 h-10 bg-nara-hunter rounded-2xl flex items-center justify-center text-white font-black">N</div>
+           <div className="w-10 h-10 bg-nara-hunter rounded-2xl flex items-center justify-center text-white font-black shadow-soft">N</div>
            <div>
-              <h1 className="text-sm font-bold">N.A.R.A Agent</h1>
-              <span className="text-[10px] text-nara-emerald font-bold uppercase tracking-widest">Inference Active</span>
+              <h1 className="text-sm font-black text-nara-text">N.A.R.A Agent</h1>
+              <div className="flex items-center gap-1">
+                 <div className="w-1 h-1 rounded-full bg-nara-emerald animate-pulse" />
+                 <span className="text-[9px] text-nara-emerald font-black uppercase tracking-widest">Logic Online</span>
+              </div>
            </div>
         </div>
         <MoreVertical size={20} className="text-slate-400" />
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-6 z-10 no-scrollbar pb-40">
+      {/* Messages Area */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6 z-10 no-scrollbar">
+        <div className="text-center mb-4">
+           <span className="px-4 py-1 rounded-full bg-white/40 border border-white/60 text-[9px] font-black text-slate-400 uppercase tracking-widest">Protocol Active</span>
+        </div>
+        
         <AnimatePresence>
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] p-4 rounded-[24px] ${msg.sender === 'user' ? 'bg-nara-hunter text-white rounded-tr-none' : msg.isXAI ? 'bg-nara-evergreen text-white rounded-tl-none border border-nara-hunter/30 shadow-sm' : 'bg-white/70 backdrop-blur-md text-nara-text rounded-tl-none border border-white/80 shadow-sm'}`}>
-                <p className="text-sm font-medium">{msg.text}</p>
+            <motion.div 
+              key={msg.id} 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`max-w-[85%] flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                {msg.isXAI && (
+                  <div className="flex items-center gap-1.5 mb-1.5 px-2">
+                     <ShieldCheck size={12} className="text-nara-emerald" />
+                     <span className="text-[9px] font-black text-nara-emerald uppercase tracking-widest">XAI Insight</span>
+                  </div>
+                )}
+                <div className={`p-4 rounded-[24px] shadow-sm ${
+                  msg.sender === 'user' 
+                  ? 'bg-nara-hunter text-white rounded-tr-none shadow-nara-hunter/10' 
+                  : msg.isXAI 
+                  ? 'bg-nara-evergreen text-white rounded-tl-none border border-nara-hunter/30' 
+                  : 'bg-white/70 backdrop-blur-md text-nara-text rounded-tl-none border border-white/80'
+                }`}>
+                  <p className="text-[15px] leading-relaxed font-medium">{msg.text}</p>
+                </div>
+                <span className="mt-1 text-[9px] font-bold text-slate-400 px-2 uppercase">{msg.timestamp}</span>
               </div>
-            </div>
+            </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
-      {/* Input Section */}
-      <div className="p-6 bg-white/40 backdrop-blur-2xl border-t border-white/60 z-20 shrink-0 mb-[84px]">
+      {/* Input Section - Floating cleanly above Nav */}
+      <div className="px-6 pt-4 pb-[calc(100px+env(safe-area-inset-bottom))] bg-white/40 backdrop-blur-2xl border-t border-white/60 z-20 shrink-0">
         <div className="flex items-center gap-3">
-          <button className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 shadow-sm hover:bg-slate-50 transition-colors"><Plus size={20} /></button>
+          <button className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 shadow-soft active:scale-90 transition-all">
+             <Plus size={22} />
+          </button>
           <div className="flex-1 relative">
-            <input type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} placeholder="Ask NARA..." className="app-input py-3.5 pr-12 text-sm" />
-            <button onClick={handleSend} className="absolute right-2 top-2 w-10 h-10 flex items-center justify-center bg-nara-hunter text-white rounded-xl shadow-soft active:scale-90 transition-all"><Send size={18} /></button>
+            <input 
+              type="text" 
+              value={inputValue} 
+              onChange={e => setInputValue(e.target.value)} 
+              onKeyPress={e => e.key === 'Enter' && handleSend()} 
+              placeholder="Ask NARA..." 
+              className="app-input py-3.5 pr-12 text-[15px]" 
+            />
+            <button 
+              onClick={handleSend} 
+              className={`absolute right-2 top-2 w-10 h-10 flex items-center justify-center rounded-xl shadow-soft active:scale-90 transition-all ${
+                inputValue.trim() ? 'bg-nara-hunter text-white' : 'bg-slate-50 text-slate-300'
+              }`}
+            >
+              <Send size={18} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Industrial Nav Bar - PURE CSS SOLUTION */}
-      <nav className="fixed bottom-0 left-0 w-full h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[calc(16px+env(safe-area-inset-bottom))]">
+      {/* Nav Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
          <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
             <Calendar size={24} />
-            <span className="text-[10px] font-bold uppercase mt-1.5 tracking-widest">Plan</span>
+            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>
          </Link>
          <Link href="/chat" className="nav-hitbox text-nara-hunter">
             <MessageSquare size={24} fill="currentColor" className="opacity-80" />
-            <span className="text-[10px] font-bold uppercase mt-1.5 tracking-widest">Chat</span>
+            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Chat</span>
          </Link>
          <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
             <User size={24} />
-            <span className="text-[10px] font-bold uppercase mt-1.5 tracking-widest">Profile</span>
+            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span>
          </Link>
       </nav>
     </div>
