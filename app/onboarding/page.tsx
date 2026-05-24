@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -81,14 +81,14 @@ export default function Onboarding() {
       <div className="w-full max-w-md flex-1 flex flex-col z-10 overflow-y-auto no-scrollbar">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+            <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1">
               <div>
                 <h1 className="text-3xl font-black">Biometrics</h1>
                 <p className="text-nara-muted text-sm">Let&apos;s define your physical identity.</p>
               </div>
               <div className="flex gap-4">
-                {['male', 'female'].map((g) => (
-                  <button key={g} onClick={() => setGender(g as any)} className={`flex-1 p-6 rounded-[32px] border transition-all ${gender === g ? 'bg-nara-hunter/10 border-nara-hunter' : 'bg-white/40 border-white/80'}`}>
+                {(['male', 'female'] as const).map((g) => (
+                  <button key={g} onClick={() => setGender(g)} className={`flex-1 p-6 rounded-[32px] border transition-all ${gender === g ? 'bg-nara-hunter/10 border-nara-hunter' : 'bg-white/40 border-white/80'}`}>
                     <User className="mx-auto mb-2" size={24} />
                     <span className="font-bold text-xs uppercase">{g}</span>
                   </button>

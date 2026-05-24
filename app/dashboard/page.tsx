@@ -63,7 +63,6 @@ const MOCK_MEAL_PLAN = [
 export default function Dashboard() {
   const [selectedDay, setSelectedDay] = useState(MOCK_MEAL_PLAN[0]);
   const [activeMealIndex, setActiveMealIndex] = useState(0);
-  const router = useRouter();
   
   const currentMeal = selectedDay.meals && selectedDay.meals.length > 0 
     ? selectedDay.meals[activeMealIndex] || selectedDay.meals[0]
