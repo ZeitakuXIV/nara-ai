@@ -27,7 +27,7 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-nara-light relative overflow-hidden">
+    <div className="app-content bg-nara-light">
       <div className="pwa-bg" />
       
       <header className="px-6 pt-[env(safe-area-inset-top,1.5rem)] pb-4 flex items-center justify-between z-20 shrink-0 bg-white/20 backdrop-blur-md">
