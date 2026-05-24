@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PWAInstallGuide from "./components/PWAInstallGuide";
-import ViewportFix from "./components/ViewportFix";
 
 export const metadata: Metadata = {
   title: "NARA",
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3D644D", // Match theme color better
+  themeColor: "#3D644D",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -29,9 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="overflow-hidden">
-      <body className="font-sans antialiased overflow-hidden">
-        <ViewportFix />
+    <html lang="en">
+      <body className="font-sans antialiased">
         <PWAInstallGuide />
         {/* Global Animated Background Blobs */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
@@ -40,7 +38,7 @@ export default function RootLayout({
           <div className="absolute bottom-1/4 left-1/3 w-[60vw] h-[60vw] bg-nara-emerald/5 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-4000" />
         </div>
 
-        <main className="h-full w-full flex flex-col relative overflow-hidden">
+        <main className="h-screen w-full flex flex-col relative overflow-hidden">
           {children}
         </main>
       </body>

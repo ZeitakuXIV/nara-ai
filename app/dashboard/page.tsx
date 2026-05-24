@@ -199,7 +199,7 @@ export default function Dashboard() {
 
             {/* Ingredients */}
             <div className="glass-container p-8">
-               <h3 className="text-[11px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
+               <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
                   {currentMeal.ingredients.map((ing, i) => (
                      <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
@@ -213,8 +213,8 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Industrial Nav Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
+      {/* Industrial Nav Bar - PURE CSS SOLUTION */}
+      <nav className="fixed bottom-0 left-0 w-full h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[calc(16px+env(safe-area-inset-bottom))]">
          <Link href="/dashboard" className="nav-hitbox text-nara-hunter">
             <Calendar size={24} fill="currentColor" />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>

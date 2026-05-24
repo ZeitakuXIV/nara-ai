@@ -12,17 +12,20 @@
 }
 
 @layer base {
-  /* THE ULTIMATE IOS PWA "CHIN GAP" FIX:
-     1. Set height to 100% and -webkit-fill-available as fallbacks.
-     2. Use JS-calculated --app-height for pixel-perfect precision.
-     3. Apply background directly to HTML to hide elastic scroll gaps. */
-  html {
+  /* THE ABSOLUTE FIX: 
+     1. Use 100vh for iOS PWA standalone mode - it is the most stable unit.
+     2. Ensure background is on HTML to cover overflows. */
+  html, body {
+    @apply antialiased font-sans text-nara-text;
     background-color: var(--nara-light);
-    height: 100%;
-    height: -webkit-fill-available;
-    height: var(--app-height, 100vh);
+    height: 100vh !important;
     width: 100vw;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
+  }
+
+  html {
     background-image: 
       radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%), 
       radial-gradient(at 100% 0%, rgba(61, 100, 77, 0.15) 0px, transparent 50%),
@@ -30,24 +33,10 @@
     background-attachment: fixed;
   }
 
-  body {
-    @apply text-nara-text font-sans antialiased;
-    height: 100%;
-    height: -webkit-fill-available;
-    height: var(--app-height, 100vh);
-    width: 100vw;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: transparent;
-  }
-
-  /* Internal container that handles scrolling to prevent body-level overscroll bugs */
+  /* Main scrollable area */
   .app-content {
     @apply flex-1 w-full flex flex-col overflow-y-auto no-scrollbar relative;
-    height: 100%;
-    height: -webkit-fill-available;
-    height: var(--app-height, 100vh);
+    height: 100vh !important;
   }
 }
 
