@@ -10,7 +10,8 @@ export default function PWAInstallGuide() {
 
   useEffect(() => {
     // Check if already in standalone mode
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        ('standalone' in window.navigator && (window.navigator as Navigator & { standalone: boolean }).standalone);
     
     // Check if user dismissed it in this session
     const isDismissed = sessionStorage.getItem('pwa_guide_dismissed');

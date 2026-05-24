@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ShieldCheck, User, MoreVertical, Plus, Calendar, MessageSquare } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { Send, User, MoreVertical, Plus, Calendar, MessageSquare } from 'lucide-react';
 
 const INITIAL_MESSAGES = [
   { id: 1, sender: 'nara', text: "Hello! I'm NARA, your Nutrition Agent. How can I help you today?", timestamp: '09:00' },

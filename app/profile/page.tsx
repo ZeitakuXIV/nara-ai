@@ -9,11 +9,9 @@ import {
   Weight, 
   Calendar as AgeIcon, 
   MapPin, 
-  ShieldAlert, 
   Save, 
   RotateCcw,
   MessageSquare,
-  Calendar,
   Target
 } from 'lucide-react';
 
@@ -22,21 +20,11 @@ export default function Profile() {
   const [height, setHeight] = useState(170);
   const [age, setAge] = useState(24);
   const [location, setLocation] = useState('Jakarta Selatan');
-  const [goal, setGoal] = useState('bulking');
-  const [allergies, setAllergies] = useState(['Seafood', 'Dairy']);
-
-  const commonAllergies = ['Peanuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Seafood', 'Shellfish', 'Tree Nuts'];
 
   const bmi = useMemo(() => {
     const heightInMeters = height / 100;
     return parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
   }, [height, weight]);
-
-  const toggleAllergy = (allergy: string) => {
-    setAllergies(prev => 
-      prev.includes(allergy) ? prev.filter(a => a !== allergy) : [...prev, allergy]
-    );
-  };
 
   return (
     <div className="app-content bg-nara-light">
@@ -79,7 +67,7 @@ export default function Profile() {
                     </div>
                     <div className="flex items-center gap-1">
                        <input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
-                       <span className="text-xs font-bold text-slate-400">kg</span>
+                       <span className="text-sm font-bold text-slate-400">kg</span>
                     </div>
                  </div>
                  <div className="flex-1 glass-card p-6">
@@ -88,7 +76,7 @@ export default function Profile() {
                     </div>
                     <div className="flex items-center gap-1">
                        <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
-                       <span className="text-xs font-bold text-slate-400">cm</span>
+                       <span className="text-sm font-bold text-slate-400">cm</span>
                     </div>
                  </div>
               </div>
