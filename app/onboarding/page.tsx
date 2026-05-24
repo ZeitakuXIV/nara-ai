@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -64,10 +64,10 @@ export default function Onboarding() {
   const prevStep = () => setStep(s => s - 1);
 
   return (
-    <div className="flex-1 flex flex-col items-center px-6 pt-[env(safe-area-inset-top,2rem)] pb-[env(safe-area-inset-bottom,2rem)] min-h-[100dvh] relative overflow-hidden">
+    <div className="flex-1 flex flex-col items-center px-6 pt-[env(safe-area-inset-top,2rem)] pb-[env(safe-area-inset-bottom,2rem)] min-h-[100dvh] relative">
       
       {/* Step Header */}
-      <header className="w-full max-w-md flex flex-col gap-6 mb-8 z-10">
+      <header className="w-full max-w-md flex flex-col gap-6 mb-8 z-10 shrink-0">
         <div className="flex items-center justify-between">
           <button onClick={() => step > 1 ? prevStep() : window.history.back()} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/50 border border-white/80"><ChevronLeft size={20} /></button>
           <div className="text-[10px] font-bold uppercase tracking-widest text-nara-hunter">{step <= 4 ? `Step ${step} of 4` : 'Processing'}</div>
@@ -81,7 +81,7 @@ export default function Onboarding() {
       <div className="w-full max-w-md flex-1 flex flex-col z-10 overflow-y-auto no-scrollbar">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1">
+            <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
               <div>
                 <h1 className="text-3xl font-black">Biometrics</h1>
                 <p className="text-nara-muted text-sm">Let&apos;s define your physical identity.</p>
@@ -96,13 +96,43 @@ export default function Onboarding() {
               </div>
               <div className="space-y-4">
                  <input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="Your Age" className="app-input" />
+                 
                  <div className="glass-container p-6 space-y-8">
+                    {/* Height */}
                     <div className="space-y-4">
-                       <div className="flex justify-between font-bold text-xs uppercase text-slate-400"><span>Height</span><span>{height}cm</span></div>
+                       <div className="flex justify-between items-center px-1">
+                          <div className="flex items-center gap-2 text-nara-text font-bold text-sm">
+                             <Ruler size={18} className="text-nara-hunter" /> Height
+                          </div>
+                          <div className="flex items-center gap-1 bg-white/50 px-3 py-1 rounded-xl border border-white/80">
+                             <input 
+                               type="number"
+                               value={height}
+                               onChange={(e) => setHeight(Math.min(250, Math.max(0, parseInt(e.target.value) || 0)))}
+                               className="w-12 bg-transparent text-right font-black text-nara-hunter focus:outline-none"
+                             />
+                             <span className="text-xs font-bold text-slate-400">cm</span>
+                          </div>
+                       </div>
                        <input type="range" min="120" max="220" value={height} onChange={e => setHeight(parseInt(e.target.value))} className="w-full accent-nara-hunter" />
                     </div>
+
+                    {/* Weight */}
                     <div className="space-y-4">
-                       <div className="flex justify-between font-bold text-xs uppercase text-slate-400"><span>Weight</span><span>{weight}kg</span></div>
+                       <div className="flex justify-between items-center px-1">
+                          <div className="flex items-center gap-2 text-nara-text font-bold text-sm">
+                             <Weight size={18} className="text-nara-hunter" /> Weight
+                          </div>
+                          <div className="flex items-center gap-1 bg-white/50 px-3 py-1 rounded-xl border border-white/80">
+                             <input 
+                               type="number"
+                               value={weight}
+                               onChange={(e) => setWeight(Math.min(300, Math.max(0, parseInt(e.target.value) || 0)))}
+                               className="w-12 bg-transparent text-right font-black text-nara-hunter focus:outline-none"
+                             />
+                             <span className="text-xs font-bold text-slate-400">kg</span>
+                          </div>
+                       </div>
                        <input type="range" min="30" max="180" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="w-full accent-nara-hunter" />
                     </div>
                  </div>
@@ -116,7 +146,7 @@ export default function Onboarding() {
           )}
 
           {step === 2 && (
-            <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 px-1 pb-10">
               <h1 className="text-3xl font-black">Activity</h1>
               <div className="grid gap-4">
                 {activityLevels.map((l) => (
@@ -131,7 +161,7 @@ export default function Onboarding() {
           )}
 
           {step === 3 && (
-            <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+            <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
               <h1 className="text-3xl font-black">Constraints</h1>
               <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Region (e.g. Jakarta)" className="app-input" />
               <div className="flex flex-wrap gap-2">
@@ -145,7 +175,7 @@ export default function Onboarding() {
           )}
 
           {step === 4 && (
-            <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+            <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 px-1 pb-10">
               <h1 className="text-3xl font-black">Objective</h1>
               <div className="grid gap-4">
                 {dietGoals.map((g) => {
@@ -163,8 +193,19 @@ export default function Onboarding() {
           )}
 
           {step > 4 && (
-            <motion.div key="fin" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="w-24 h-24 bg-nara-hunter rounded-[32px] flex items-center justify-center shadow-float mb-8 animate-pulse"><span className="text-white text-4xl font-black">N</span></div>
+            <motion.div key="fin" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center h-full">
+              <div className="relative w-32 h-32 mb-10">
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/20"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                     <div className="w-20 h-20 bg-nara-hunter rounded-3xl flex items-center justify-center shadow-float animate-pulse">
+                        <span className="text-white font-black text-3xl">N</span>
+                     </div>
+                  </div>
+               </div>
               <h2 className="text-2xl font-black">Calibrating NARA</h2>
               <p className="text-nara-muted mt-4 max-w-[240px] text-sm">Scaling recipes to match your biometric signature...</p>
             </motion.div>

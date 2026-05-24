@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -75,10 +74,10 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div className="flex-1 flex flex-col h-[100dvh] relative overflow-hidden pt-[env(safe-area-inset-top,0px)]">
+    <div className="flex-1 flex flex-col min-h-[100dvh] relative overflow-hidden pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]">
       
       {/* Top Bar */}
-      <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
+      <header className="px-6 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-bold text-nara-hunter uppercase tracking-[0.2em] mb-1">Act Layer</p>
            <h1 className="text-2xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
@@ -88,7 +87,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="px-6 flex-1 z-10 space-y-6 overflow-y-auto no-scrollbar pb-40">
+      <main className="px-6 flex-1 z-10 space-y-6 overflow-y-auto no-scrollbar pb-32">
         {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2">
           {MOCK_MEAL_PLAN.map((d) => (
@@ -107,7 +106,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Carousel of Meals */}
+        {/* Recommended Meals Carousel */}
         <div className="space-y-4">
            <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -126,7 +125,7 @@ export default function Dashboard() {
                         activeMealIndex === idx ? 'border-nara-hunter' : 'border-transparent'
                      }`}
                    >
-                      <Image src={meal.image} alt={meal.title} fill className="object-cover" />
+                      <Image src={meal.image} alt={meal.title} fill className="object-cover" priority />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute top-6 left-6 flex gap-2">
                          <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-[10px] text-white font-bold uppercase">{meal.type}</div>
@@ -139,22 +138,29 @@ export default function Dashboard() {
                 ))}
              </div>
            ) : (
-             <div className="h-[200px] glass-container flex flex-col items-center justify-center text-center p-8">
-                <Zap className="text-nara-hunter animate-pulse mb-4" size={32} />
-                <h3 className="text-lg font-bold">Optimizing Day {selectedDay.id}</h3>
+             <div className="glass-container p-12 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6">
+                   <Zap size={32} className="text-nara-hunter animate-pulse" />
+                </div>
+                <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Refining Day {selectedDay.id}</h3>
+                <p className="text-sm text-nara-muted leading-relaxed max-w-[200px]">NARA is calibrating your nutritional CSP matrix for this specific day.</p>
              </div>
            )}
         </div>
 
         {currentMeal && (
           <div className="space-y-6">
-            <div className="glass-container p-6 grid grid-cols-2 gap-4">
+            {/* Macro Chart */}
+            <div className="glass-container p-8 grid grid-cols-2 gap-4">
                <div className="flex flex-col justify-center">
                   <h3 className="text-sm font-black text-nara-text mb-4 uppercase tracking-wider">Macros</h3>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                      {chartData.map((d) => (
                         <div key={d.name} className="flex items-center justify-between">
-                           <span className="text-[11px] font-bold text-slate-500">{d.name}</span>
+                           <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">{d.name}</span>
+                           </div>
                            <span className="text-[11px] font-black text-nara-text">{d.value}g</span>
                         </div>
                      ))}
@@ -169,26 +175,29 @@ export default function Dashboard() {
                      </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center">
-                     <span className="text-sm font-black text-nara-hunter">{currentMeal.protein}g</span>
+                     <span className="text-sm font-black text-nara-hunter">{currentMeal.calories}</span>
+                     <span className="text-[8px] font-bold uppercase text-slate-400 tracking-widest">KCAL</span>
                   </div>
                </div>
             </div>
 
-            <div className="p-5 rounded-[28px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-soft">
-               <div className="flex items-center gap-2 mb-2">
-                  <ShieldCheck size={16} className="text-nara-emerald" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-nara-emerald">XAI Reasoning</span>
+            {/* XAI Reasoning */}
+            <div className="p-6 rounded-[32px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-soft">
+               <div className="flex items-center gap-2 mb-3">
+                  <ShieldCheck size={18} className="text-nara-emerald" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-nara-emerald">XAI Reasoning</span>
                </div>
-               <p className="text-white/80 text-xs leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
+               <p className="text-white/80 text-sm leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </div>
 
-            <div className="glass-container p-6">
+            {/* Ingredients */}
+            <div className="glass-container p-8">
                <h3 className="text-sm font-black text-nara-text mb-4 uppercase tracking-wider">Scaled Ingredients</h3>
-               <div className="space-y-3">
+               <div className="space-y-4">
                   {currentMeal.ingredients.map((ing, i) => (
-                     <div key={i} className="flex items-center justify-between p-3 bg-white/40 rounded-xl border border-white/80">
-                        <span className="text-xs font-bold text-nara-text">{ing.name}</span>
-                        <span className="text-[10px] font-black text-nara-hunter bg-white px-2 py-0.5 rounded-lg">{ing.qty}</span>
+                     <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80">
+                        <span className="text-sm font-bold text-nara-text">{ing.name}</span>
+                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">{ing.qty}</span>
                      </div>
                   ))}
                </div>
@@ -197,6 +206,7 @@ export default function Dashboard() {
         )}
       </main>
 
+      {/* Nav Bar */}
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
          <Link href="/dashboard" className="nav-hitbox text-nara-hunter">
             <Calendar size={24} fill="currentColor" />

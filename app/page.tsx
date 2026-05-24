@@ -14,7 +14,7 @@ export default function AppEntry() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center px-6 pt-[env(safe-area-inset-top,2rem)] pb-[env(safe-area-inset-bottom,2rem)] relative min-h-[100dvh] justify-center">
+    <div className="min-h-[100dvh] flex flex-col justify-center items-center px-6 pt-[env(safe-area-inset-top,2rem)] pb-[env(safe-area-inset-bottom,2rem)] relative">
       
       {/* App Logo & Identity */}
       <motion.div 
@@ -22,7 +22,7 @@ export default function AppEntry() {
         animate={{ y: 0, opacity: 1 }}
         className="flex flex-col items-center mb-10 z-10"
       >
-        <div className="w-24 h-24 bg-gradient-to-br from-nara-hunter to-nara-evergreen rounded-[32px] shadow-[0_20px_40px_-4px_rgba(61,100,77,0.3)] flex items-center justify-center mb-6 relative overflow-hidden group">
+        <div className="w-24 h-24 bg-gradient-to-br from-nara-hunter to-nara-evergreen rounded-[32px] shadow-[0_20px_40px_-4px_rgba(61,100,77,0.3)] flex items-center justify-center mb-6 relative overflow-hidden">
            <span className="text-white font-black text-4xl tracking-tighter">N</span>
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-nara-text mb-2 text-glow">N.A.R.A</h1>
@@ -37,7 +37,7 @@ export default function AppEntry() {
         animate={{ y: 0, opacity: 1 }}
         className="w-full max-w-sm z-10"
       >
-        <div className="glass-container p-8">
+        <div className="glass-container p-8 relative">
           <AnimatePresence mode="wait">
             {isLogin ? (
               <motion.div
@@ -90,7 +90,7 @@ export default function AppEntry() {
           </div>
 
           <div className="mt-6">
-             <button className="btn-secondary">
+             <button className="btn-secondary w-full">
                <Apple size={20} className="fill-current" />
                Continue with Apple
              </button>
