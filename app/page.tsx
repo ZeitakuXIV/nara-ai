@@ -14,12 +14,8 @@ export default function AppEntry() {
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden bg-nara-light">
-      
-      {/* High-fidelity animated background blobs */}
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-nara-emerald/10 rounded-full mix-blend-multiply filter blur-3xl animate-blob pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-nara-hunter/10 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000 pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-nara-emerald/5 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000 pointer-events-none" />
+    <div className="flex-1 flex flex-col relative justify-center">
+      {/* Background is now handled by layout.tsx */}
 
       {/* Identity Section - Perfectly Centered */}
       <div className="flex-1 flex flex-col justify-center items-center px-8 z-10 w-full">
@@ -81,7 +77,7 @@ export default function AppEntry() {
               <div className="flex-1 h-[1px] bg-slate-200/60"></div>
             </div>
 
-            {/* RESTORED: Google Login with stylized logo */}
+            {/* Google Login */}
             <div className="mt-6">
                <button className="btn-secondary w-full py-4 font-bold text-[16px] flex items-center justify-center gap-3">
                  <svg width="20" height="20" viewBox="0 0 48 48">

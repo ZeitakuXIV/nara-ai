@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target, Heart } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart } from 'lucide-react';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -36,8 +36,8 @@ export default function Onboarding() {
 
   const dietGoals = [
     { id: 'cutting', title: 'Cutting', desc: 'Fat loss focus.', icon: Zap },
-    { id: 'maintenance', title: 'Maintenance', desc: 'Health focus.', icon: Heart }, // Changed to Heart for distinction
-    { id: 'bulking', title: 'Bulking', desc: 'Muscle focus.', icon: Dumbbell }, // Changed to Dumbbell for distinction
+    { id: 'maintenance', title: 'Maintenance', desc: 'Health focus.', icon: Heart },
+    { id: 'bulking', title: 'Bulking', desc: 'Muscle focus.', icon: Dumbbell },
   ];
 
   const bmi = useMemo(() => {
@@ -62,9 +62,10 @@ export default function Onboarding() {
   const bmiStatus = getBmiStatus(bmi);
 
   return (
-    <div className="app-content px-6">
+    <div className="app-content px-6 bg-transparent">
+      {/* Background blobs handled by layout.tsx */}
       
-      {/* Header - Compact to prevent scrolling */}
+      {/* Header - Balanced for Notch */}
       <header className="w-full max-w-sm mx-auto flex flex-col gap-4 mt-6 mb-6 z-10 shrink-0">
         <div className="flex items-center justify-between">
           <button 
@@ -92,7 +93,7 @@ export default function Onboarding() {
 
               <div className="flex gap-3">
                 {(['male', 'female'] as const).map((g) => (
-                  <button key={g} onClick={() => setGender(g)} className={`flex-1 py-4 rounded-[28px] border transition-all flex flex-col items-center gap-1 ${gender === g ? 'bg-nara-hunter/10 border-nara-hunter shadow-float' : 'bg-white/40 border-white/80'}`}>
+                  <button key={g} onClick={() => setGender(g)} className={`flex-1 p-4 rounded-[28px] border transition-all flex flex-col items-center gap-1 ${gender === g ? 'bg-nara-hunter/10 border-nara-hunter shadow-float' : 'bg-white/40 border-white/80'}`}>
                     <User className={`${gender === g ? 'text-nara-hunter' : 'text-slate-300'}`} size={20} />
                     <span className={`font-black text-[10px] uppercase tracking-widest ${gender === g ? 'text-nara-hunter' : 'text-slate-500'}`}>{g}</span>
                   </button>
@@ -111,7 +112,7 @@ export default function Onboarding() {
                           <div className="flex items-center gap-2 text-nara-text font-black text-[10px] uppercase tracking-wider opacity-60">
                              <Ruler size={14} /> Height
                           </div>
-                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80">
+                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80 shadow-sm">
                              <input 
                                type="number"
                                value={height}
@@ -129,7 +130,7 @@ export default function Onboarding() {
                           <div className="flex items-center gap-2 text-nara-text font-black text-[10px] uppercase tracking-wider opacity-60">
                              <Weight size={14} /> Weight
                           </div>
-                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80">
+                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80 shadow-sm">
                              <input 
                                type="number"
                                value={weight}
@@ -184,7 +185,7 @@ export default function Onboarding() {
                  <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-[0.2em]">Common Allergies</label>
                  <div className="flex flex-wrap gap-2">
                    {commonAllergies.map(a => (
-                     <button key={a} onClick={() => toggleAllergy(a)} className={`px-5 py-3 rounded-full border text-[11px] font-black uppercase tracking-wider transition-all ${allergies.includes(a) ? 'bg-nara-hunter border-nara-hunter text-white shadow-soft' : 'bg-white/40 border-white/80 text-nara-muted'}`}>{a}</button>
+                     <button key={a} onClick={() => toggleAllergy(a)} className={`px-4 py-3 rounded-full border text-[11px] font-black uppercase tracking-wider transition-all ${allergies.includes(a) ? 'bg-nara-hunter border-nara-hunter text-white shadow-soft' : 'bg-white/40 border-white/80 text-nara-muted'}`}>{a}</button>
                    ))}
                  </div>
               </div>
@@ -221,7 +222,7 @@ export default function Onboarding() {
 
           {step > 4 && (
             <motion.div key="fin" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center h-full pt-10">
-              <div className="relative w-32 h-32 mb-10 aspect-square">
+              <div className="relative w-32 h-32 mb-10 aspect-square shrink-0">
                   <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/30" />
                   <div className="absolute inset-0 flex items-center justify-center">
                      <div className="w-20 h-20 bg-nara-hunter rounded-[32px] flex items-center justify-center shadow-float animate-pulse">

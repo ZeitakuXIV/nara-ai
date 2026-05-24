@@ -30,14 +30,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <PWAInstallGuide />
-        {/* Global Animated Background Blobs */}
+        {/* GLOBAL PREMIUM BACKGROUND: High-fidelity animated blobs for all pages */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
-          <div className="absolute top-1/4 left-1/4 w-[50vw] h-[50vw] bg-nara-emerald/10 rounded-full mix-blend-multiply filter blur-[80px] animate-blob" />
-          <div className="absolute top-1/3 right-1/4 w-[40vw] h-[40vw] bg-nara-hunter/10 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-2000" />
-          <div className="absolute bottom-1/4 left-1/3 w-[60vw] h-[60vw] bg-nara-emerald/5 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-4000" />
+          <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-nara-emerald/10 rounded-full mix-blend-multiply filter blur-[80px] animate-blob" />
+          <div className="absolute top-[20%] right-[-10%] w-[60vw] h-[60vw] bg-nara-hunter/10 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-2000" />
+          <div className="absolute bottom-[-10%] left-[10%] w-[80vw] h-[80vw] bg-nara-emerald/5 rounded-full mix-blend-multiply filter blur-[120px] animate-blob animation-delay-4000" />
         </div>
 
+        <PWAInstallGuide />
+        
         <main className="h-screen w-full flex flex-col relative overflow-hidden">
           {children}
         </main>
