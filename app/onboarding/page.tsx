@@ -81,21 +81,24 @@ export default function Onboarding() {
       <div className="w-full max-w-md flex-1 flex flex-col z-10 overflow-y-auto no-scrollbar">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
+            <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 pb-10">
               <div>
                 <h1 className="text-3xl font-black">Biometrics</h1>
-                <p className="text-nara-muted text-sm">Let&apos;s define your physical identity.</p>
+                <p className="text-nara-muted text-sm leading-tight">Let&apos;s start with your biometric signature.</p>
               </div>
               <div className="flex gap-4">
                 {(['male', 'female'] as const).map((g) => (
-                  <button key={g} onClick={() => setGender(g)} className={`flex-1 p-6 rounded-[32px] border transition-all ${gender === g ? 'bg-nara-hunter/10 border-nara-hunter' : 'bg-white/40 border-white/80'}`}>
+                  <button key={g} onClick={() => setGender(g)} className={`flex-1 p-6 rounded-[32px] border transition-all ${gender === g ? 'bg-nara-hunter/10 border-nara-hunter shadow-float' : 'bg-white/40 border-white/80'}`}>
                     <User className="mx-auto mb-2" size={24} />
                     <span className="font-bold text-xs uppercase">{g}</span>
                   </button>
                 ))}
               </div>
               <div className="space-y-4">
-                 <input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="Your Age" className="app-input" />
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Manual Age Input</label>
+                   <input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 24" className="app-input py-4 font-bold" />
+                 </div>
                  
                  <div className="glass-container p-6 space-y-8">
                     {/* Height */}
@@ -114,7 +117,7 @@ export default function Onboarding() {
                              <span className="text-xs font-bold text-slate-400">cm</span>
                           </div>
                        </div>
-                       <input type="range" min="120" max="220" value={height} onChange={e => setHeight(parseInt(e.target.value))} className="w-full accent-nara-hunter" />
+                       <input type="range" min="120" max="220" value={height} onChange={e => setHeight(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-full appearance-none accent-nara-hunter cursor-pointer" />
                     </div>
 
                     {/* Weight */}
@@ -133,26 +136,29 @@ export default function Onboarding() {
                              <span className="text-xs font-bold text-slate-400">kg</span>
                           </div>
                        </div>
-                       <input type="range" min="30" max="180" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="w-full accent-nara-hunter" />
+                       <input type="range" min="30" max="180" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-full appearance-none accent-nara-hunter cursor-pointer" />
                     </div>
                  </div>
               </div>
               <div className="flex justify-between items-center p-5 rounded-[32px] border border-dashed border-slate-300">
-                 <span className={`font-black ${bmiStatus.color}`}>{bmiStatus.label}</span>
-                 <span className="text-2xl font-black">{bmi}</span>
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">BMI Status</span>
+                    <span className={`font-black ${bmiStatus.color}`}>{bmiStatus.label}</span>
+                 </div>
+                 <span className="text-3xl font-black text-nara-text">{bmi}</span>
               </div>
               <button disabled={!gender || !age} onClick={nextStep} className="btn-primary py-5">Continue <ArrowRight size={20} /></button>
             </motion.div>
           )}
 
           {step === 2 && (
-            <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 px-1 pb-10">
-              <h1 className="text-3xl font-black">Activity</h1>
+            <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-10">
+              <h1 className="text-3xl font-black">Daily Activity</h1>
               <div className="grid gap-4">
                 {activityLevels.map((l) => (
-                  <button key={l.id} onClick={() => setActivity(l.id)} className={`p-6 rounded-[32px] border text-left flex items-center gap-4 transition-all ${activity === l.id ? 'bg-nara-hunter/10 border-nara-hunter scale-[1.02]' : 'bg-white/40 border-white/80'}`}>
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${activity === l.id ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}><l.icon size={24} /></div>
-                    <div><h3 className="font-bold">{l.title}</h3><p className="text-xs text-slate-500">{l.desc}</p></div>
+                  <button key={l.id} onClick={() => setActivity(l.id)} className={`p-6 rounded-[32px] border text-left flex items-center gap-4 transition-all ${activity === l.id ? 'bg-nara-hunter/10 border-nara-hunter scale-[1.02] shadow-float' : 'bg-white/40 border-white/80'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${activity === l.id ? 'bg-nara-hunter text-white shadow-soft' : 'bg-slate-100 text-slate-400'}`}><l.icon size={28} /></div>
+                    <div><h3 className="font-bold text-lg leading-tight">{l.title}</h3><p className="text-xs text-slate-500 mt-0.5">{l.desc}</p></div>
                   </button>
                 ))}
               </div>
@@ -161,34 +167,40 @@ export default function Onboarding() {
           )}
 
           {step === 3 && (
-            <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
+            <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 pb-10">
               <h1 className="text-3xl font-black">Constraints</h1>
-              <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Region (e.g. Jakarta)" className="app-input" />
-              <div className="flex flex-wrap gap-2">
-                {commonAllergies.map(a => (
-                  <button key={a} onClick={() => toggleAllergy(a)} className={`px-5 py-2.5 rounded-full border text-xs font-bold transition-all ${allergies.includes(a) ? 'bg-nara-hunter text-white' : 'bg-white/40 border-white/80'}`}>{a}</button>
-                ))}
+              <div className="space-y-3">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Location Context</label>
+                 <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Region (e.g. Jakarta Selatan)" className="app-input" />
               </div>
-              {isAtRisk && <div className="p-5 rounded-[32px] bg-red-50 border border-red-100 flex gap-4 italic text-xs text-red-700"><ShieldCheck className="shrink-0" /> Safety Shield Active: Low BMI detected.</div>}
+              <div className="space-y-4">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Allergies</label>
+                 <div className="flex flex-wrap gap-2">
+                   {commonAllergies.map(a => (
+                     <button key={a} onClick={() => toggleAllergy(a)} className={`px-5 py-2.5 rounded-full border text-xs font-bold transition-all ${allergies.includes(a) ? 'bg-nara-hunter border-nara-hunter text-white shadow-soft' : 'bg-white/40 border-white/80'}`}>{a}</button>
+                   ))}
+                 </div>
+              </div>
+              {isAtRisk && <div className="p-5 rounded-[32px] bg-red-50 border border-red-100 flex gap-4 italic text-xs text-red-700 shadow-sm"><ShieldCheck className="shrink-0" /> Safety Shield Active: NARA will prioritize nutrient density over restriction.</div>}
               <button disabled={!location} onClick={nextStep} className="btn-primary py-5">Continue <ArrowRight size={20} /></button>
             </motion.div>
           )}
 
           {step === 4 && (
-            <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 px-1 pb-10">
-              <h1 className="text-3xl font-black">Objective</h1>
+            <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-10">
+              <h1 className="text-3xl font-black">The Objective</h1>
               <div className="grid gap-4">
                 {dietGoals.map((g) => {
                   const disabled = isAtRisk && g.id === 'cutting';
                   return (
-                    <button key={g.id} disabled={disabled} onClick={() => setGoal(g.id)} className={`p-6 rounded-[32px] border text-left flex items-center gap-4 transition-all ${disabled ? 'opacity-30 grayscale' : goal === g.id ? 'bg-nara-hunter/10 border-nara-hunter scale-[1.02]' : 'bg-white/40 border-white/80'}`}>
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${goal === g.id ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}><g.icon size={24} /></div>
-                      <div><h3 className="font-bold">{g.title}</h3><p className="text-xs text-slate-500">{g.desc}</p></div>
+                    <button key={g.id} disabled={disabled} onClick={() => setGoal(g.id)} className={`p-6 rounded-[32px] border text-left flex items-center gap-4 transition-all ${disabled ? 'opacity-30 grayscale cursor-not-allowed' : goal === g.id ? 'bg-nara-hunter/10 border-nara-hunter scale-[1.02] shadow-float' : 'bg-white/40 border-white/80'}`}>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${goal === g.id ? 'bg-nara-hunter text-white shadow-soft' : 'bg-slate-100 text-slate-400'}`}><g.icon size={28} /></div>
+                      <div><h3 className="font-bold text-lg leading-tight">{g.title}</h3><p className="text-xs text-slate-500 mt-0.5">{disabled ? 'Restricted for medical safety.' : g.desc}</p></div>
                     </button>
                   );
                 })}
               </div>
-              <button disabled={!goal} onClick={nextStep} className="btn-primary py-6 mt-4">Generate Plan <Zap size={20} /></button>
+              <button disabled={!goal} onClick={nextStep} className="btn-primary py-6 mt-4">Generate My Plan <Zap size={20} /></button>
             </motion.div>
           )}
 
@@ -206,8 +218,8 @@ export default function Onboarding() {
                      </div>
                   </div>
                </div>
-              <h2 className="text-2xl font-black">Calibrating NARA</h2>
-              <p className="text-nara-muted mt-4 max-w-[240px] text-sm">Scaling recipes to match your biometric signature...</p>
+              <h2 className="text-3xl font-black tracking-tight">Calibrating NARA</h2>
+              <p className="text-nara-muted mt-4 max-w-[260px] text-sm leading-relaxed">Scaling recipes and local ingredients to match your biometric signature...</p>
             </motion.div>
           )}
         </AnimatePresence>

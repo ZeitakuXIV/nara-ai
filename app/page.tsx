@@ -14,16 +14,22 @@ export default function AppEntry() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col justify-center items-center px-6 pt-[env(safe-area-inset-top,2rem)] pb-[env(safe-area-inset-bottom,2rem)] relative">
+    <div className="min-h-[100dvh] flex flex-col justify-center items-center px-6 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] relative overflow-hidden">
       
-      {/* App Logo & Identity */}
+      {/* Restore Animated Background Blobs */}
+      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-nara-emerald/10 rounded-full mix-blend-multiply filter blur-3xl animate-blob pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-nara-hunter/10 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000 pointer-events-none" />
+      <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-nara-emerald/5 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000 pointer-events-none" />
+
+      {/* App Logo & Identity - Balanced Centering */}
       <motion.div 
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex flex-col items-center mb-10 z-10"
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col items-center mb-8 z-10"
       >
         <div className="w-24 h-24 bg-gradient-to-br from-nara-hunter to-nara-evergreen rounded-[32px] shadow-[0_20px_40px_-4px_rgba(61,100,77,0.3)] flex items-center justify-center mb-6 relative overflow-hidden">
-           <span className="text-white font-black text-4xl tracking-tighter">N</span>
+           <span className="text-white font-black text-4xl tracking-tighter drop-shadow-md">N</span>
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-nara-text mb-2 text-glow">N.A.R.A</h1>
         <div className="flex items-center gap-1.5 text-nara-emerald font-bold text-[11px] uppercase tracking-[0.2em] bg-nara-emerald/10 px-3 py-1 rounded-full border border-nara-emerald/20">
@@ -31,10 +37,11 @@ export default function AppEntry() {
         </div>
       </motion.div>
 
-      {/* Auth Container */}
+      {/* Auth Container with Glassmorphism */}
       <motion.div 
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-sm z-10"
       >
         <div className="glass-container p-8 relative">
@@ -90,19 +97,20 @@ export default function AppEntry() {
           </div>
 
           <div className="mt-6">
-             <button className="btn-secondary w-full">
+             <button className="btn-secondary w-full py-4 text-[16px] font-bold">
                <Apple size={20} className="fill-current" />
                Continue with Apple
              </button>
           </div>
         </div>
 
-        <div className="mt-8 text-center">
+        {/* Toggle State */}
+        <div className="mt-10 text-center">
           <p className="text-nara-muted text-[15px] font-medium">
             {isLogin ? "New to NARA? " : "Already using NARA? "}
             <button 
               onClick={() => setIsLogin(!isLogin)}
-              className="text-nara-hunter font-bold hover:text-nara-emerald transition-colors"
+              className="text-nara-hunter font-bold hover:text-nara-emerald transition-colors underline-offset-4 hover:underline"
             >
               {isLogin ? "Create account" : "Log in"}
             </button>
@@ -110,7 +118,7 @@ export default function AppEntry() {
         </div>
       </motion.div>
       
-      <footer className="mt-auto pt-8 text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] z-10 opacity-60">
+      <footer className="mt-auto text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em] z-10 opacity-60">
         Protocol Compliance v2.0
       </footer>
     </div>
