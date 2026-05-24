@@ -28,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang="en" className="h-[100dvh] overflow-hidden">
+      <body className="font-sans antialiased h-[100dvh] overflow-hidden">
         <PWAInstallGuide />
         {/* Global Animated Background Blobs */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
