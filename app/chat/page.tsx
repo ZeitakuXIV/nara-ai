@@ -94,12 +94,6 @@ export default function Chatbot() {
       {/* Chat Header */}
       <header className="nav-blur px-6 py-4 flex items-center justify-between z-20">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => window.history.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-nara-text active:scale-90 transition-all"
-          >
-            <ArrowLeft size={18} />
-          </button>
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-nara-hunter rounded-2xl flex items-center justify-center shadow-soft relative">
                 <span className="text-white font-black text-lg">N</span>

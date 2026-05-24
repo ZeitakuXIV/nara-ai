@@ -7,18 +7,18 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "NARA",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F8FAFC",
+  themeColor: "#3D644D", // Match theme color better
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover", // Essential for PWA app-feel
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -27,10 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang="en" className="bg-nara-light overflow-hidden">
+      <body className="font-sans antialiased bg-nara-light">
         {/* We remove the global nav here because an App typically doesn't have a web-style nav on the Auth screen */}
-        <main className="min-h-[100dvh] flex flex-col">
+        <main className="h-[100dvh] flex flex-col overflow-hidden">
           {children}
         </main>
       </body>

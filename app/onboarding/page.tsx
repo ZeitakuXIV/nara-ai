@@ -75,10 +75,10 @@ export default function Onboarding() {
   const prevStep = () => setStep(s => s - 1);
 
   return (
-    <div className="flex-1 flex flex-col px-6 py-8 relative overflow-hidden bg-mesh-gradient min-h-[100dvh]">
+    <div className="h-[100dvh] flex flex-col px-6 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] relative overflow-hidden bg-mesh-gradient">
       
       {/* Top Header & Progress */}
-      <header className="flex flex-col gap-6 mb-10 z-10">
+      <header className="flex flex-col gap-4 mb-6 z-10">
         <div className="flex items-center justify-between">
           <button 
             onClick={() => step > 1 ? prevStep() : window.history.back()}
@@ -103,7 +103,7 @@ export default function Onboarding() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col z-10 max-w-md mx-auto w-full pb-10">
+      <div className="flex-1 flex flex-col z-10 max-w-md mx-auto w-full overflow-y-auto no-scrollbar pb-6">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -112,72 +112,72 @@ export default function Onboarding() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col gap-8"
+              className="flex flex-col gap-6"
             >
-              <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-nara-text">Physical Identity</h1>
-                <p className="text-nara-muted text-base">Let&apos;s start with your biometric signature.</p>
+              <div className="space-y-1">
+                <h1 className="text-2xl font-extrabold tracking-tight text-nara-text">Physical Identity</h1>
+                <p className="text-nara-muted text-sm leading-tight">Let&apos;s start with your biometric signature.</p>
               </div>
 
               {/* Gender Toggle */}
               <div className="flex gap-4">
                 <button 
                   onClick={() => setGender('male')}
-                  className={`flex-1 p-6 rounded-3xl border transition-all flex flex-col items-center gap-3 ${
+                  className={`flex-1 p-4 rounded-3xl border transition-all flex flex-col items-center gap-2 ${
                     gender === 'male' 
                     ? 'bg-nara-hunter/10 border-nara-hunter shadow-float' 
                     : 'bg-white/40 border-white/80'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${gender === 'male' ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
-                    <User size={24} />
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${gender === 'male' ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    <User size={20} />
                   </div>
-                  <span className={`font-bold text-sm ${gender === 'male' ? 'text-nara-hunter' : 'text-slate-500'}`}>Male</span>
+                  <span className={`font-bold text-xs ${gender === 'male' ? 'text-nara-hunter' : 'text-slate-500'}`}>Male</span>
                 </button>
 
                 <button 
                   onClick={() => setGender('female')}
-                  className={`flex-1 p-6 rounded-3xl border transition-all flex flex-col items-center gap-3 ${
+                  className={`flex-1 p-4 rounded-3xl border transition-all flex flex-col items-center gap-2 ${
                     gender === 'female' 
                     ? 'bg-nara-hunter/10 border-nara-hunter shadow-float' 
                     : 'bg-white/40 border-white/80'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${gender === 'female' ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
-                    <User size={24} />
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${gender === 'female' ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    <User size={20} />
                   </div>
-                  <span className={`font-bold text-sm ${gender === 'female' ? 'text-nara-hunter' : 'text-slate-500'}`}>Female</span>
+                  <span className={`font-bold text-xs ${gender === 'female' ? 'text-nara-hunter' : 'text-slate-500'}`}>Female</span>
                 </button>
               </div>
 
               {/* Age Input */}
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-nara-text px-1 uppercase tracking-wider opacity-60">Your Age</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-nara-text px-1 uppercase tracking-wider opacity-60">Your Age</label>
                 <input 
                   type="number" 
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                   placeholder="e.g. 24"
-                  className="app-input text-xl font-bold"
+                  className="app-input py-3 text-lg font-bold"
                 />
               </div>
 
               {/* Height & Weight Container */}
-              <div className="glass-container p-6 space-y-8">
+              <div className="glass-container p-5 space-y-6">
                 {/* Height */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center px-1">
-                    <div className="flex items-center gap-2 text-nara-text font-bold">
-                      <Ruler size={18} className="text-nara-hunter" /> Height
+                    <div className="flex items-center gap-2 text-nara-text font-bold text-sm">
+                      <Ruler size={16} className="text-nara-hunter" /> Height
                     </div>
-                    <div className="flex items-center gap-1 bg-white/50 px-3 py-1 rounded-xl border border-white/80">
+                    <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80">
                       <input 
                         type="number"
                         value={height}
                         onChange={(e) => setHeight(Math.min(250, Math.max(0, parseInt(e.target.value) || 0)))}
-                        className="w-12 bg-transparent text-right font-black text-nara-hunter focus:outline-none"
+                        className="w-10 bg-transparent text-right font-black text-nara-hunter text-sm focus:outline-none"
                       />
-                      <span className="text-xs font-bold text-slate-400">cm</span>
+                      <span className="text-[10px] font-bold text-slate-400">cm</span>
                     </div>
                   </div>
                   <input 
@@ -186,24 +186,24 @@ export default function Onboarding() {
                     max="220" 
                     value={height}
                     onChange={(e) => setHeight(parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-full appearance-none accent-nara-hunter cursor-pointer"
+                    className="w-full h-1.5 bg-slate-200 rounded-full appearance-none accent-nara-hunter cursor-pointer"
                   />
                 </div>
 
                 {/* Weight */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center px-1">
-                    <div className="flex items-center gap-2 text-nara-text font-bold">
-                      <Weight size={18} className="text-nara-hunter" /> Weight
+                    <div className="flex items-center gap-2 text-nara-text font-bold text-sm">
+                      <Weight size={16} className="text-nara-hunter" /> Weight
                     </div>
-                    <div className="flex items-center gap-1 bg-white/50 px-3 py-1 rounded-xl border border-white/80">
+                    <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80">
                       <input 
                         type="number"
                         value={weight}
                         onChange={(e) => setWeight(Math.min(300, Math.max(0, parseInt(e.target.value) || 0)))}
-                        className="w-12 bg-transparent text-right font-black text-nara-hunter focus:outline-none"
+                        className="w-10 bg-transparent text-right font-black text-nara-hunter text-sm focus:outline-none"
                       />
-                      <span className="text-xs font-bold text-slate-400">kg</span>
+                      <span className="text-[10px] font-bold text-slate-400">kg</span>
                     </div>
                   </div>
                   <input 
@@ -212,25 +212,25 @@ export default function Onboarding() {
                     max="150" 
                     value={weight}
                     onChange={(e) => setWeight(parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-full appearance-none accent-nara-hunter cursor-pointer"
+                    className="w-full h-1.5 bg-slate-200 rounded-full appearance-none accent-nara-hunter cursor-pointer"
                   />
                 </div>
               </div>
 
               {/* BMI Live Feedback */}
-              <div className="flex items-center justify-between p-5 rounded-3xl bg-white/40 border border-white/80 border-dashed">
+              <div className="flex items-center justify-between p-4 rounded-3xl bg-white/40 border border-white/80 border-dashed">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current BMI</span>
-                  <span className={`text-xl font-bold ${bmiStatus.color}`}>{bmiStatus.label}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">BMI</span>
+                  <span className={`text-base font-bold ${bmiStatus.color}`}>{bmiStatus.label}</span>
                 </div>
-                <div className="text-3xl font-black text-nara-text opacity-80">{bmi}</div>
+                <div className="text-2xl font-black text-nara-text opacity-80">{bmi}</div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-2">
                 <button 
                   disabled={!gender || !age}
                   onClick={nextStep}
-                  className={`btn-primary ${(!gender || !age) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                  className={`btn-primary py-4 ${(!gender || !age) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                 >
                   Continue <ArrowRight size={20} />
                 </button>
@@ -245,14 +245,14 @@ export default function Onboarding() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col gap-8"
+              className="flex flex-col gap-6"
             >
-              <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-nara-text text-glow">Daily Activity</h1>
-                <p className="text-nara-muted text-base">How much do you move on a typical day?</p>
+              <div className="space-y-1">
+                <h1 className="text-2xl font-extrabold tracking-tight text-nara-text text-glow">Daily Activity</h1>
+                <p className="text-nara-muted text-sm">How much do you move on a typical day?</p>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 {activityLevels.map((level) => {
                   const Icon = level.icon;
                   const isActive = activity === level.id;
@@ -260,44 +260,32 @@ export default function Onboarding() {
                     <button
                       key={level.id}
                       onClick={() => setActivity(level.id)}
-                      className={`p-6 rounded-[32px] border transition-all duration-300 flex items-center gap-5 text-left group ${
+                      className={`p-4 rounded-[28px] border transition-all duration-300 flex items-center gap-4 text-left group ${
                         isActive 
-                        ? 'bg-nara-hunter/10 border-nara-hunter shadow-float scale-[1.02]' 
-                        : 'bg-white/40 border-white/80 hover:bg-white/60'
+                        ? 'bg-nara-hunter/10 border-nara-hunter shadow-float scale-[1.01]' 
+                        : 'bg-white/40 border-white/80'
                       }`}
                     >
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isActive ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                        <Icon size={28} />
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
+                        <Icon size={24} />
                       </div>
                       <div className="flex-1">
-                        <h3 className={`font-bold text-lg leading-tight ${isActive ? 'text-nara-text' : 'text-slate-700'}`}>{level.title}</h3>
-                        <p className={`text-sm mt-1 leading-snug ${isActive ? 'text-nara-hunter font-medium' : 'text-slate-500'}`}>{level.desc}</p>
+                        <h3 className={`font-bold text-base leading-tight ${isActive ? 'text-nara-text' : 'text-slate-700'}`}>{level.title}</h3>
+                        <p className={`text-xs mt-0.5 leading-snug ${isActive ? 'text-nara-hunter font-medium' : 'text-slate-500'}`}>{level.desc}</p>
                       </div>
-                      {isActive && (
-                        <motion.div 
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-6 h-6 rounded-full bg-nara-hunter flex items-center justify-center"
-                        >
-                           <ArrowRight size={14} className="text-white" />
-                        </motion.div>
-                      )}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="mt-8">
+              <div className="mt-4">
                 <button 
                   disabled={!activity}
                   onClick={nextStep}
-                  className={`btn-primary ${!activity ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                  className={`btn-primary py-4 ${!activity ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                 >
                   Continue <ArrowRight size={20} />
                 </button>
-                <p className="mt-4 text-center text-xs text-nara-muted font-medium uppercase tracking-widest opacity-60">
-                   Used for TDEE Calculation
-                </p>
               </div>
             </motion.div>
           )}
@@ -309,30 +297,30 @@ export default function Onboarding() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col gap-8"
+              className="flex flex-col gap-6"
             >
-              <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-nara-text">Safety & Region</h1>
-                <p className="text-nara-muted text-base">Personalize your dietary constraints and location.</p>
+              <div className="space-y-1">
+                <h1 className="text-2xl font-extrabold tracking-tight text-nara-text">Safety & Region</h1>
+                <p className="text-nara-muted text-sm">Personalize your dietary constraints.</p>
               </div>
 
               {/* Regional Sensing */}
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-nara-text px-1 uppercase tracking-wider opacity-60 flex items-center gap-2">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-nara-text px-1 uppercase tracking-wider opacity-60 flex items-center gap-2">
                    Your Region (Indonesia)
                 </label>
                 <input 
                   type="text" 
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Jakarta Selatan, Bali, Papua"
-                  className="app-input"
+                  placeholder="e.g. Jakarta Selatan"
+                  className="app-input py-3.5 text-sm"
                 />
               </div>
 
               {/* Allergen Multi-select */}
-              <div className="space-y-4">
-                <label className="text-sm font-bold text-nara-text px-1 uppercase tracking-wider opacity-60">Common Allergens</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-nara-text px-1 uppercase tracking-wider opacity-60">Common Allergens</label>
                 <div className="flex flex-wrap gap-2">
                   {commonAllergies.map((allergy) => {
                     const isSelected = allergies.includes(allergy);
@@ -340,10 +328,10 @@ export default function Onboarding() {
                       <button
                         key={allergy}
                         onClick={() => toggleAllergy(allergy)}
-                        className={`px-5 py-2.5 rounded-full border text-sm font-bold transition-all ${
+                        className={`px-4 py-2 rounded-full border text-[11px] font-bold transition-all ${
                           isSelected 
                           ? 'bg-nara-hunter border-nara-hunter text-white shadow-soft' 
-                          : 'bg-white/40 border-white/80 text-nara-muted hover:bg-white/60'
+                          : 'bg-white/40 border-white/80 text-nara-muted'
                         }`}
                       >
                         {allergy}
@@ -359,26 +347,26 @@ export default function Onboarding() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-5 rounded-3xl bg-red-50 border border-red-100 flex items-start gap-4 shadow-sm"
+                    className="p-4 rounded-3xl bg-red-50 border border-red-100 flex items-start gap-3 shadow-sm"
                   >
-                    <div className="w-10 h-10 rounded-2xl bg-red-500 flex items-center justify-center shrink-0 text-white shadow-lg shadow-red-500/20">
-                       <ShieldCheck size={20} />
+                    <div className="w-8 h-8 rounded-xl bg-red-500 flex items-center justify-center shrink-0 text-white shadow-lg">
+                       <ShieldCheck size={16} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-red-900 uppercase tracking-tighter text-left">Safety Shield Active</h4>
-                      <p className="text-xs text-red-700 leading-normal mt-1 text-left">
-                        NARA has detected a health risk (BMI: {bmi}). We will prioritize nutrient density over caloric restriction.
+                      <h4 className="text-[11px] font-bold text-red-900 uppercase tracking-tighter text-left">Safety Shield Active</h4>
+                      <p className="text-[10px] text-red-700 leading-tight mt-0.5 text-left">
+                        NARA has detected a health risk. We will prioritize nutrient density.
                       </p>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <div className="mt-4">
+              <div className="mt-2">
                 <button 
                   disabled={!location}
                   onClick={nextStep}
-                  className={`btn-primary ${!location ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                  className={`btn-primary py-4 ${!location ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                 >
                   Continue <ArrowRight size={20} />
                 </button>
@@ -393,14 +381,14 @@ export default function Onboarding() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col gap-8"
+              className="flex flex-col gap-6"
             >
-              <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-nara-text text-glow">The Objective</h1>
-                <p className="text-nara-muted text-base">Select your primary dietary goal.</p>
+              <div className="space-y-1">
+                <h1 className="text-2xl font-extrabold tracking-tight text-nara-text text-glow">The Objective</h1>
+                <p className="text-nara-muted text-sm">Select your primary dietary goal.</p>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 {dietGoals.map((g) => {
                   const Icon = g.icon;
                   const isActive = goal === g.id;
@@ -411,53 +399,26 @@ export default function Onboarding() {
                       key={g.id}
                       disabled={isDisabled}
                       onClick={() => setGoal(g.id)}
-                      className={`p-6 rounded-[32px] border transition-all duration-300 flex items-center gap-5 text-left group relative ${
+                      className={`p-4 rounded-[28px] border transition-all duration-300 flex items-center gap-4 text-left group relative ${
                         isActive 
-                        ? 'bg-nara-hunter/10 border-nara-hunter shadow-float scale-[1.02]' 
+                        ? 'bg-nara-hunter/10 border-nara-hunter shadow-float scale-[1.01]' 
                         : isDisabled
                         ? 'bg-slate-50 border-slate-100 opacity-40 cursor-not-allowed'
-                        : 'bg-white/40 border-white/80 hover:bg-white/60'
+                        : 'bg-white/40 border-white/80'
                       }`}
                     >
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isActive ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
-                        <Icon size={28} />
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400'}`}>
+                        <Icon size={24} />
                       </div>
                       <div className="flex-1">
-                        <h3 className={`font-bold text-lg leading-tight ${isActive ? 'text-nara-text' : 'text-slate-700'}`}>{g.title}</h3>
-                        <p className={`text-sm mt-1 leading-snug ${isActive ? 'text-nara-hunter font-medium' : 'text-slate-500'}`}>
+                        <h3 className={`font-bold text-base leading-tight ${isActive ? 'text-nara-text' : 'text-slate-700'}`}>{g.title}</h3>
+                        <p className={`text-xs mt-0.5 leading-snug ${isActive ? 'text-nara-hunter font-medium' : 'text-slate-500'}`}>
                           {isDisabled ? 'Restricted for medical safety.' : g.desc}
                         </p>
                       </div>
-                      {isActive && (
-                        <motion.div 
-                          layoutId="check"
-                          className="w-6 h-6 rounded-full bg-nara-hunter flex items-center justify-center"
-                        >
-                           <ArrowRight size={14} className="text-white" />
-                        </motion.div>
-                      )}
                     </button>
                   );
                 })}
-              </div>
-
-              {/* Sensing Summary */}
-              <div className="p-6 rounded-3xl bg-white/20 border border-white/40">
-                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Sensing Summary</h4>
-                 <div className="grid grid-cols-2 gap-y-4 gap-x-2">
-                    <div className="flex flex-col">
-                       <span className="text-xs text-nara-muted font-medium">User Profile</span>
-                       <span className="text-sm font-bold text-nara-text">{age}yo {gender}</span>
-                    </div>
-                    <div className="flex flex-col">
-                       <span className="text-xs text-nara-muted font-medium">Health Status</span>
-                       <span className={`text-sm font-bold ${bmiStatus.color}`}>{bmiStatus.label}</span>
-                    </div>
-                    <div className="flex flex-col col-span-2">
-                       <span className="text-xs text-nara-muted font-medium">Location Context</span>
-                       <span className="text-sm font-bold text-nara-text">{location}</span>
-                    </div>
-                 </div>
               </div>
 
               <div className="mt-4">
@@ -468,8 +429,8 @@ export default function Onboarding() {
                   onClick={nextStep}
                   className={`btn-primary w-full flex justify-center items-center gap-3 py-5 ${!goal ? 'opacity-50 grayscale cursor-not-allowed' : 'animate-pulse-subtle'}`}
                 >
-                  <span className="text-lg uppercase tracking-wider">Generate My Plan</span>
-                  <Zap size={20} fill="white" className="animate-bounce" />
+                  <span className="text-base uppercase tracking-wider">Generate My Plan</span>
+                  <Zap size={18} fill="white" className="animate-bounce" />
                 </motion.button>
               </div>
             </motion.div>
@@ -480,52 +441,32 @@ export default function Onboarding() {
               key="finalizing"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center justify-center pt-10 text-center"
+              className="flex flex-col items-center justify-center pt-10 text-center h-full"
             >
-               <div className="relative w-32 h-32 mb-10">
+               <div className="relative w-28 h-28 mb-8">
                   <motion.div 
                     animate={{ rotate: 360 }}
                     transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
                     className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/20"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
-                     <div className="w-20 h-20 bg-nara-hunter rounded-3xl flex items-center justify-center shadow-float animate-pulse">
-                        <span className="text-white font-black text-3xl">N</span>
+                     <div className="w-16 h-16 bg-nara-hunter rounded-3xl flex items-center justify-center shadow-float animate-pulse">
+                        <span className="text-white font-black text-2xl">N</span>
                      </div>
                   </div>
                </div>
                
-               <h2 className="text-3xl font-extrabold text-nara-text tracking-tight">NARA is Reasoning</h2>
-               <p className="text-nara-muted mt-4 max-w-[260px] leading-relaxed">
+               <h2 className="text-2xl font-extrabold text-nara-text tracking-tight">NARA is Reasoning</h2>
+               <p className="text-nara-muted mt-3 max-w-[240px] text-sm leading-relaxed">
                   Calibrating local recipes and scaling portions to match your biometric signature...
                </p>
-               
-               <motion.div 
-                 initial={{ opacity: 0 }}
-                 animate={{ opacity: 1 }}
-                 transition={{ delay: 2 }}
-                 className="mt-12 w-full max-w-[200px]"
-               >
-                 <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-nara-emerald animate-ping" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-nara-emerald">Optimizing CSP Matrix</span>
-                 </div>
-                 <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ x: '-100%' }}
-                      animate={{ x: '0%' }}
-                      transition={{ duration: 3, repeat: Infinity }}
-                      className="h-full w-full bg-nara-emerald"
-                    />
-                 </div>
-               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {/* Decorative Blur Blobs */}
-      <div className="absolute bottom-[-10%] right-[-10%] w-[300px] h-[300px] bg-nara-emerald/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[200px] h-[200px] bg-nara-emerald/5 rounded-full blur-[80px] pointer-events-none" />
     </div>
   );
 }

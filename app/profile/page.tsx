@@ -49,9 +49,6 @@ export default function Profile() {
       {/* Header */}
       <header className="px-6 pt-12 pb-6 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
-           <button onClick={() => window.history.back()} className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center shadow-sm">
-              <ArrowLeft size={20} />
-           </button>
            <h1 className="text-2xl font-black text-nara-text tracking-tight">Health Identity</h1>
         </div>
         <div className="w-10 h-10 rounded-2xl bg-nara-hunter flex items-center justify-center text-white font-bold">
