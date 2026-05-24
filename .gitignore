@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+pwa-nara/node_modules/
+
+# Next.js build output
+.next/
+pwa-nara/.next/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Local env files
+.env*.local
+
+# Large Dataset Files (Original raw data to keep repo light)
+datasets/allergen2/
+datasets/allergen3/
+datasets/nutrition/
+datasets/recipe2/
+datasets/recipe3/
+datasets/recipe4/
+
+# Keep Master Datasets as they are cleaned
+!datasets/master/
