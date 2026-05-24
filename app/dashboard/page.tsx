@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { 
   Calendar, 
@@ -99,7 +101,12 @@ export default function Dashboard() {
         {currentMeal && (
           <div className="space-y-6">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative h-[280px] rounded-[32px] overflow-hidden shadow-float">
-                <img src={currentMeal.image} alt={meal.title} className="absolute inset-0 w-full h-full object-cover" />
+                <Image 
+                  src={currentMeal.image} 
+                  alt={currentMeal.title} 
+                  fill
+                  className="object-cover" 
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <div className="absolute top-4 left-4 flex gap-2">
                     <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-[9px] text-white font-bold uppercase">{currentMeal.type}</div>
@@ -149,18 +156,18 @@ export default function Dashboard() {
 
       {/* Industrial Nav Bar with High-Hitbox Affordance */}
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(80px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
-         <button className="nav-hitbox text-nara-hunter" onClick={() => {}}>
+         <Link href="/dashboard" className="nav-hitbox text-nara-hunter">
             <Calendar size={24} fill="currentColor" />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Plan</span>
-         </button>
-         <button className="nav-hitbox text-slate-400" onClick={() => router.push('/chat')}>
+         </Link>
+         <Link href="/chat" className="nav-hitbox text-slate-400">
             <MessageSquare size={24} />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Chat</span>
-         </button>
-         <button className="nav-hitbox text-slate-400" onClick={() => router.push('/profile')}>
+         </Link>
+         <Link href="/profile" className="nav-hitbox text-slate-400">
             <User size={24} />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Profile</span>
-         </button>
+         </Link>
       </nav>
     </div>
   );

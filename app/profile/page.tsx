@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -24,7 +24,6 @@ export default function Profile() {
   const [location, setLocation] = useState('Jakarta Selatan');
   const [goal, setGoal] = useState('bulking');
   const [allergies, setAllergies] = useState(['Seafood', 'Dairy']);
-  const router = useRouter();
 
   const commonAllergies = ['Peanuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Seafood', 'Shellfish', 'Tree Nuts'];
 
@@ -40,7 +39,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-full relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden safe-top">
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-full h-[300px] bg-mesh-gradient opacity-40 pointer-events-none" />
 
@@ -54,7 +53,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <main className="px-6 space-y-6 z-10 max-w-md mx-auto w-full overflow-y-auto no-scrollbar pb-32">
+      <main className="px-6 space-y-6 z-10 max-w-md mx-auto w-full overflow-y-auto no-scrollbar pb-40">
         
         {/* BMI & Stats Overview Card */}
         <div className="glass-container p-6 flex items-center justify-between bg-gradient-to-br from-white/60 to-nara-emerald/5">
@@ -195,36 +194,36 @@ export default function Profile() {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4 pt-6">
-           <button 
-             onClick={() => router.push('/dashboard')}
+           <Link 
+             href="/dashboard"
              className="btn-primary flex items-center justify-center gap-2 py-5"
            >
               <Save size={20} /> Save Changes
-           </button>
-           <button 
-             onClick={() => router.push('/onboarding')}
+           </Link>
+           <Link 
+             href="/onboarding"
              className="flex items-center justify-center gap-2 text-nara-hunter font-bold text-sm hover:underline py-2"
            >
               <RotateCcw size={16} /> Recalculate Profile from Zero
-           </button>
+           </Link>
         </div>
 
       </main>
 
       {/* Industrial Nav Bar with High-Hitbox Affordance */}
-      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-stretch justify-around px-2 z-50 overflow-hidden">
-         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/dashboard')}>
-            <Calendar size={22} />
-            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
-         </button>
-         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/chat')}>
-            <MessageSquare size={22} />
-            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
-         </button>
-         <button className="nav-hitbox text-nara-hunter" onClick={() => {}}>
-            <User size={22} fill="currentColor" className="opacity-80" />
-            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
-         </button>
+      <nav className="fixed bottom-0 left-0 right-0 h-[calc(80px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
+         <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
+            <Calendar size={24} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Plan</span>
+         </Link>
+         <Link href="/chat" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
+            <MessageSquare size={24} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Chat</span>
+         </Link>
+         <Link href="/profile" className="nav-hitbox text-nara-hunter">
+            <User size={24} fill="currentColor" className="opacity-80" />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Profile</span>
+         </Link>
       </nav>
     </div>
   );

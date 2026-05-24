@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, 
@@ -41,7 +41,6 @@ export default function Chatbot() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -84,7 +83,7 @@ export default function Chatbot() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-nara-light h-full relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden safe-top">
       
       {/* Mesh Background */}
       <div className="absolute top-0 left-0 w-full h-full bg-mesh-gradient opacity-30 pointer-events-none" />
@@ -114,7 +113,7 @@ export default function Chatbot() {
       {/* Messages Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 z-10 no-scrollbar pb-32"
+        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 z-10 no-scrollbar pb-40"
       >
         <div className="text-center mb-8">
            <span className="px-4 py-1.5 rounded-full bg-white/50 border border-white/80 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Today • May 24</span>
@@ -171,7 +170,7 @@ export default function Chatbot() {
       </div>
 
       {/* Input Section */}
-      <div className="p-6 bg-white/40 backdrop-blur-2xl border-t border-white/60 z-20 shrink-0 pb-32">
+      <div className="p-6 bg-white/40 backdrop-blur-2xl border-t border-white/60 z-20 shrink-0 pb-[calc(100px+env(safe-area-inset-bottom))]">
         {/* Quick Actions */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
            {quickActions.map((action, i) => (
@@ -211,19 +210,19 @@ export default function Chatbot() {
       </div>
 
       {/* Industrial Nav Bar with High-Hitbox Affordance */}
-      <nav className="fixed bottom-6 left-6 right-6 h-20 bg-white/80 backdrop-blur-2xl rounded-[32px] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-stretch justify-around px-2 z-50 overflow-hidden">
-         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/dashboard')}>
-            <Calendar size={22} />
-            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Plan</span>
-         </button>
-         <button className="nav-hitbox text-nara-hunter" onClick={() => {}}>
-            <MessageSquare size={22} fill="currentColor" className="opacity-80" />
-            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Chat</span>
-         </button>
-         <button className="nav-hitbox text-slate-400 hover:text-nara-hunter" onClick={() => router.push('/profile')}>
-            <User size={22} />
-            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Profile</span>
-         </button>
+      <nav className="fixed bottom-0 left-0 right-0 h-[calc(80px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
+         <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
+            <Calendar size={24} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Plan</span>
+         </Link>
+         <Link href="/chat" className="nav-hitbox text-nara-hunter">
+            <MessageSquare size={24} fill="currentColor" className="opacity-80" />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Chat</span>
+         </Link>
+         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
+            <User size={24} />
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Profile</span>
+         </Link>
       </nav>
     </div>
   );

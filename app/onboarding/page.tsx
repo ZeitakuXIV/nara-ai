@@ -75,10 +75,10 @@ export default function Onboarding() {
   const prevStep = () => setStep(s => s - 1);
 
   return (
-    <div className="h-[100dvh] flex flex-col px-6 pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)] relative overflow-hidden bg-mesh-gradient">
+    <div className="flex-1 flex flex-col bg-nara-light h-[100dvh] relative overflow-hidden safe-top">
       
       {/* Top Header & Progress */}
-      <header className="flex flex-col gap-4 mb-6 z-10">
+      <header className="flex flex-col gap-4 mb-6 z-10 px-6">
         <div className="flex items-center justify-between">
           <button 
             onClick={() => step > 1 ? prevStep() : window.history.back()}

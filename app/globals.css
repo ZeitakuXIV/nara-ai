@@ -8,12 +8,13 @@
   --nara-hunter: #3D644D;
   --nara-evergreen: #223E2F;
   --nara-light: #F0F4F2;
+  --nara-emerald: #10B981;
 }
 
 @layer base {
-  /* Industrial background fill for iOS */
+  /* Industrial background fill for iOS - Set to Hunter Green to eliminate white bars */
   html {
-    background-color: var(--nara-light);
+    background-color: var(--nara-hunter);
     height: 100%;
     overflow: hidden;
   }
@@ -57,7 +58,7 @@
 
   /* Improved High-Affordance Nav Button */
   .nav-hitbox {
-    @apply flex-1 flex flex-col items-center justify-center h-full w-full transition-all active:scale-95 active:opacity-60 cursor-pointer touch-manipulation relative z-50;
+    @apply flex-1 flex flex-col items-center justify-center h-full w-full transition-all active:bg-nara-hunter/5 cursor-pointer touch-manipulation relative z-50;
     -webkit-tap-highlight-color: transparent;
   }
 
