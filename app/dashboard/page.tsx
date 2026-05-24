@@ -74,7 +74,7 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div className="flex-1 flex flex-col min-h-[100dvh] relative overflow-hidden pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]">
+    <div className="flex-1 flex flex-col h-[100dvh] relative overflow-hidden pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]">
       
       {/* Top Bar */}
       <header className="px-6 pb-4 flex justify-between items-end z-10 shrink-0">
@@ -94,7 +94,7 @@ export default function Dashboard() {
             <button
               key={d.id}
               onClick={() => { setSelectedDay(d); setActiveMealIndex(0); }}
-              className={`flex flex-col items-center justify-center min-w-[60px] h-16 rounded-2xl transition-all duration-300 border ${
+              className={`flex flex-col items-center justify-center min-w-[64px] h-16 rounded-2xl transition-all duration-300 border ${
                 selectedDay.id === d.id 
                 ? 'bg-nara-hunter text-white shadow-float border-nara-hunter' 
                 : 'bg-white/60 text-nara-muted border-white/80'
@@ -106,7 +106,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Recommended Meals Carousel */}
+        {/* RESTORED: Recommended Meals Carousel with Images */}
         <div className="space-y-4">
            <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -125,7 +125,7 @@ export default function Dashboard() {
                         activeMealIndex === idx ? 'border-nara-hunter' : 'border-transparent'
                      }`}
                    >
-                      <Image src={meal.image} alt={meal.title} fill className="object-cover" priority />
+                      <Image src={meal.image} alt={meal.title} fill className="object-cover" priority unoptimized />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute top-6 left-6 flex gap-2">
                          <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 text-[10px] text-white font-bold uppercase">{meal.type}</div>
@@ -139,18 +139,16 @@ export default function Dashboard() {
              </div>
            ) : (
              <div className="glass-container p-12 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6">
-                   <Zap size={32} className="text-nara-hunter animate-pulse" />
-                </div>
+                <Zap size={32} className="text-nara-hunter animate-pulse mb-6" />
                 <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Refining Day {selectedDay.id}</h3>
-                <p className="text-sm text-nara-muted leading-relaxed max-w-[200px]">NARA is calibrating your nutritional CSP matrix for this specific day.</p>
+                <p className="text-sm text-nara-muted leading-relaxed">NARA is calibrating your nutritional CSP matrix.</p>
              </div>
            )}
         </div>
 
         {currentMeal && (
           <div className="space-y-6">
-            {/* Macro Chart */}
+            {/* Macro Chart with KCAL Center Label */}
             <div className="glass-container p-8 grid grid-cols-2 gap-4">
                <div className="flex flex-col justify-center">
                   <h3 className="text-sm font-black text-nara-text mb-4 uppercase tracking-wider">Macros</h3>
@@ -159,7 +157,7 @@ export default function Dashboard() {
                         <div key={d.name} className="flex items-center justify-between">
                            <div className="flex items-center gap-2">
                               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
-                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">{d.name}</span>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase">{d.name}</span>
                            </div>
                            <span className="text-[11px] font-black text-nara-text">{d.value}g</span>
                         </div>
@@ -181,23 +179,21 @@ export default function Dashboard() {
                </div>
             </div>
 
-            {/* XAI Reasoning */}
             <div className="p-6 rounded-[32px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-soft">
                <div className="flex items-center gap-2 mb-3">
                   <ShieldCheck size={18} className="text-nara-emerald" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-nara-emerald">XAI Reasoning</span>
                </div>
-               <p className="text-white/80 text-sm leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
+               <p className="text-white/80 text-xs leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </div>
 
-            {/* Ingredients */}
             <div className="glass-container p-8">
                <h3 className="text-sm font-black text-nara-text mb-4 uppercase tracking-wider">Scaled Ingredients</h3>
                <div className="space-y-4">
                   {currentMeal.ingredients.map((ing, i) => (
-                     <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80">
+                     <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
                         <span className="text-sm font-bold text-nara-text">{ing.name}</span>
-                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">{ing.qty}</span>
+                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1 rounded-lg border border-slate-100">{ing.qty}</span>
                      </div>
                   ))}
                </div>
@@ -206,17 +202,16 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Nav Bar */}
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
          <Link href="/dashboard" className="nav-hitbox text-nara-hunter">
             <Calendar size={24} fill="currentColor" />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Plan</span>
          </Link>
-         <Link href="/chat" className="nav-hitbox text-slate-400">
+         <Link href="/chat" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
             <MessageSquare size={24} />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Chat</span>
          </Link>
-         <Link href="/profile" className="nav-hitbox text-slate-400">
+         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
             <User size={24} />
             <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5">Profile</span>
          </Link>
