@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Activity, ShieldCheck, Target, Ruler, Weight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Activity, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap } from 'lucide-react';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -12,6 +12,15 @@ export default function Onboarding() {
   const [age, setAge] = useState<string>('');
   const [height, setHeight] = useState<number>(170);
   const [weight, setWeight] = useState<number>(65);
+  const [activity, setActivity] = useState<string | null>(null);
+
+  // PAL Data
+  const activityLevels = [
+    { id: 'sedentary', title: 'Sedentary', desc: 'Little to no exercise, desk job.', icon: Coffee, val: 1.2 },
+    { id: 'light', title: 'Lightly Active', desc: 'Moving around, 1-3 days of exercise.', icon: Footprints, val: 1.375 },
+    { id: 'moderate', title: 'Moderately Active', desc: 'Regular training, 3-5 days a week.', icon: Dumbbell, val: 1.55 },
+    { id: 'extra', title: 'Highly Active', desc: 'Intense daily exercise or physical job.', icon: Zap, val: 1.725 },
+  ];
 
   // BMI Logic
   const bmi = useMemo(() => {
@@ -53,7 +62,7 @@ export default function Onboarding() {
         {/* Progress Bar */}
         <div className="w-full h-1.5 bg-slate-200/50 rounded-full overflow-hidden">
           <motion.div 
-            initial={{ width: '0%' }}
+            initial={{ width: '25%' }}
             animate={{ width: `${(step / 4) * 100}%` }}
             className="h-full bg-gradient-to-r from-nara-hunter to-nara-emerald"
           />
@@ -61,7 +70,7 @@ export default function Onboarding() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col z-10 max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col z-10 max-w-md mx-auto w-full pb-10">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -196,8 +205,71 @@ export default function Onboarding() {
             </motion.div>
           )}
 
-          {/* Placeholder for future steps */}
-          {step > 1 && (
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col gap-8"
+            >
+              <div className="space-y-2">
+                <h1 className="text-3xl font-extrabold tracking-tight text-nara-text text-glow">Daily Activity</h1>
+                <p className="text-nara-muted text-base">How much do you move on a typical day?</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {activityLevels.map((level) => {
+                  const Icon = level.icon;
+                  const isActive = activity === level.id;
+                  return (
+                    <button
+                      key={level.id}
+                      onClick={() => setActivity(level.id)}
+                      className={`p-6 rounded-[32px] border transition-all duration-300 flex items-center gap-5 text-left group ${
+                        isActive 
+                        ? 'bg-nara-hunter/10 border-nara-hunter shadow-float scale-[1.02]' 
+                        : 'bg-white/40 border-white/80 hover:bg-white/60'
+                      }`}
+                    >
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isActive ? 'bg-nara-hunter text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                        <Icon size={28} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className={`font-bold text-lg leading-tight ${isActive ? 'text-nara-text' : 'text-slate-700'}`}>{level.title}</h3>
+                        <p className={`text-sm mt-1 leading-snug ${isActive ? 'text-nara-hunter font-medium' : 'text-slate-500'}`}>{level.desc}</p>
+                      </div>
+                      {isActive && (
+                        <motion.div 
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="w-6 h-6 rounded-full bg-nara-hunter flex items-center justify-center"
+                        >
+                           <ArrowRight size={14} className="text-white" />
+                        </motion.div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8">
+                <button 
+                  disabled={!activity}
+                  onClick={nextStep}
+                  className={`btn-primary ${!activity ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                >
+                  Continue <ArrowRight size={20} />
+                </button>
+                <p className="mt-4 text-center text-xs text-nara-muted font-medium uppercase tracking-widest opacity-60">
+                   Used for TDEE Calculation
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {step > 2 && (
             <motion.div
               key="future"
               initial={{ opacity: 0 }}
@@ -205,8 +277,8 @@ export default function Onboarding() {
               className="flex flex-col items-center justify-center pt-20"
             >
                <Activity size={64} className="text-nara-hunter animate-pulse mb-6" />
-               <h2 className="text-xl font-bold text-nara-text">Step {step} is loading...</h2>
-               <p className="text-nara-muted mt-2">Integration in progress.</p>
+               <h2 className="text-xl font-bold text-nara-text">Step {step} is coming soon</h2>
+               <p className="text-nara-muted mt-2 text-center max-w-[200px]">We're integrating regional food data.</p>
                <button onClick={prevStep} className="mt-8 text-nara-hunter font-bold underline">Go Back</button>
             </motion.div>
           )}
