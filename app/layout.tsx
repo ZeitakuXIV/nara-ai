@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PWAInstallGuide from "./components/PWAInstallGuide";
 
 export const metadata: Metadata = {
   title: "NARA",
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
+        <PWAInstallGuide />
         {/* Global Animated Background Blobs */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
           <div className="absolute top-1/4 left-1/4 w-[50vw] h-[50vw] bg-nara-emerald/10 rounded-full mix-blend-multiply filter blur-[80px] animate-blob" />
