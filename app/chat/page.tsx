@@ -5,17 +5,13 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, 
-  ChevronLeft, 
   ShieldCheck, 
-  Info, 
-  Sparkles, 
   User,
   MoreVertical,
   Plus,
   ArrowLeft,
   Calendar,
-  MessageSquare,
-  Target
+  MessageSquare
 } from 'lucide-react';
 
 // Mock chat history for demonstration

@@ -14,7 +14,6 @@ import {
   Save, 
   RotateCcw,
   ArrowLeft,
-  ChevronRight,
   MessageSquare
 } from 'lucide-react';
 

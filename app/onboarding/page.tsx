@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Activity, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Target } from 'lucide-react';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -43,7 +43,7 @@ export default function Onboarding() {
 
   const dietGoals = [
     { id: 'cutting', title: 'Cutting', desc: 'Fat loss while maintaining muscle.', icon: Zap },
-    { id: 'maintenance', title: 'Maintenance', desc: 'Optimize health and stable weight.', icon: Activity },
+    { id: 'maintenance', title: 'Maintenance', desc: 'Optimize health and stable weight.', icon: Target }, // Used Activity before, changed to Target to match icon usage
     { id: 'bulking', title: 'Bulking', desc: 'Healthy weight and muscle gain.', icon: Target },
   ];
 
@@ -116,7 +116,7 @@ export default function Onboarding() {
             >
               <div className="space-y-2">
                 <h1 className="text-3xl font-extrabold tracking-tight text-nara-text">Physical Identity</h1>
-                <p className="text-nara-muted text-base">Let's start with your biometric signature.</p>
+                <p className="text-nara-muted text-base">Let&apos;s start with your biometric signature.</p>
               </div>
 
               {/* Gender Toggle */}
@@ -316,6 +316,7 @@ export default function Onboarding() {
                 <p className="text-nara-muted text-base">Personalize your dietary constraints and location.</p>
               </div>
 
+              {/* Regional Sensing */}
               <div className="space-y-3">
                 <label className="text-sm font-bold text-nara-text px-1 uppercase tracking-wider opacity-60 flex items-center gap-2">
                    Your Region (Indonesia)
@@ -329,6 +330,7 @@ export default function Onboarding() {
                 />
               </div>
 
+              {/* Allergen Multi-select */}
               <div className="space-y-4">
                 <label className="text-sm font-bold text-nara-text px-1 uppercase tracking-wider opacity-60">Common Allergens</label>
                 <div className="flex flex-wrap gap-2">
@@ -351,6 +353,7 @@ export default function Onboarding() {
                 </div>
               </div>
 
+              {/* Safety Shield Logic (BMI Interception) */}
               <AnimatePresence>
                 {isAtRisk && (
                   <motion.div

@@ -2,21 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Calendar, 
   MessageSquare, 
   User, 
-  ChevronRight, 
-  Info, 
   ShieldCheck, 
-  Flame, 
   Utensils, 
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  Zap,
-  Target
+  Zap
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
@@ -85,7 +78,7 @@ export default function Dashboard() {
     <div className="flex-1 flex flex-col bg-nara-light min-h-screen pb-24 relative overflow-hidden">
       
       {/* Mesh Background */}
-      <div className="absolute top-0 right-0 w-full h-[400px] bg-mesh-gradient opacity-60 pointer-none" />
+      <div className="absolute top-0 right-0 w-full h-[400px] bg-mesh-gradient opacity-60 pointer-events-none" />
 
       {/* Top Bar */}
       <header className="px-6 pt-12 pb-6 flex justify-between items-end z-10">
@@ -198,7 +191,7 @@ export default function Dashboard() {
                   <ShieldCheck size={18} className="text-nara-emerald" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">NARA XAI Insight</span>
                </div>
-               <p className="text-white/80 text-sm leading-relaxed italic">"{currentMeal.scaling_reason}"</p>
+               <p className="text-white/80 text-sm leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </motion.div>
 
             <div className="glass-container p-8">
