@@ -12,6 +12,7 @@ import {
   Save, 
   RotateCcw,
   MessageSquare,
+  Calendar,
   Target
 } from 'lucide-react';
 
@@ -67,7 +68,7 @@ export default function Profile() {
                     </div>
                     <div className="flex items-center gap-1">
                        <input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
-                       <span className="text-xs font-bold text-slate-400">kg</span>
+                       <span className="text-sm font-bold text-slate-400">kg</span>
                     </div>
                  </div>
                  <div className="flex-1 glass-card p-6">
@@ -81,15 +82,15 @@ export default function Profile() {
                  </div>
               </div>
               
-              <div className="glass-card p-6 flex items-center justify-between">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-nara-hunter/10 flex items-center justify-center text-nara-hunter"><AgeIcon size={24} /></div>
-                    <div>
+              <div className="glass-card p-6 flex items-center justify-between gap-4">
+                 <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-12 h-12 rounded-2xl bg-nara-hunter/10 flex items-center justify-center text-nara-hunter shrink-0"><AgeIcon size={24} /></div>
+                    <div className="min-w-0">
                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Age</span>
                        <input type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} className="w-full bg-transparent text-xl font-black text-nara-text focus:outline-none" />
                     </div>
                  </div>
-                 <div className="h-12 w-[1px] bg-slate-100 mx-4" />
+                 <div className="h-12 w-[1px] bg-slate-100 shrink-0" />
                  <div className="flex items-center gap-4 flex-1 justify-end text-right min-w-0">
                     <div className="min-w-0">
                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Region</span>

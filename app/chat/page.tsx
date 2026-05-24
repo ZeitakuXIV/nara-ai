@@ -7,7 +7,7 @@ import { Send, User, MoreVertical, Plus, Calendar, MessageSquare, ShieldCheck } 
 
 const INITIAL_MESSAGES = [
   { id: 1, sender: 'nara', text: "Hello! I'm NARA, your Nutrition Agent. How can I help you today?", timestamp: '09:00' },
-  { id: 2, sender: 'nara', text: "Based on my reasoning, I've scaled your portions to match your goals.", timestamp: '09:01', isXAI: true }
+  { id: 2, sender: 'nara', text: "Based on my reasoning, I've scaled your portions to match your goals. Portions are increased by 15% to hit your protein threshold.", timestamp: '09:01', isXAI: true }
 ];
 
 export default function Chatbot() {
@@ -111,7 +111,7 @@ export default function Chatbot() {
 
       {/* Nav Bar */}
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-3xl border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
-         <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
+         <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
             <Calendar size={24} />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>
          </Link>
@@ -119,7 +119,7 @@ export default function Chatbot() {
             <MessageSquare size={24} fill="currentColor" className="opacity-80" />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Chat</span>
          </Link>
-         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter">
+         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
             <User size={24} />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span>
          </Link>
