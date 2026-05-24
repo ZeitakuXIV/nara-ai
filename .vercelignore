@@ -2,13 +2,18 @@
 ai-engine/
 datasets/
 LOGO/
+
+# Abaikan file biner dan script riset
 *.jpeg
 *.pdf
 *.csv
 *.py
-*.json
+
+# KHUSUS: Hanya abaikan eda_results.json, JANGAN abaikan package.json
+ai-engine/*.json
+eda_results.json
 
 # Standar ignore
-node_modules
-.next
-.git
+node_modules/
+.next/
+.git/
