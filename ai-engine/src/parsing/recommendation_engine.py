@@ -191,6 +191,31 @@ def is_main_dish(title, ingredients_list) -> bool:
         
     return True
 
+def load_env_indonesian_only() -> bool:
+    """
+    Manually parses the root .env file to load INDONESIAN_ONLY configuration.
+    Keeps python zero-dependency (no need to pip install python-dotenv).
+    """
+    search_paths = [
+        os.path.join(BASE_DIR, ".env"),
+        os.path.join(os.path.dirname(BASE_DIR), ".env"),
+        ".env"
+    ]
+    for path in search_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line_stripped = line.strip()
+                        if line_stripped.startswith("INDONESIAN_ONLY"):
+                            parts = line_stripped.split("=", 1)
+                            if len(parts) == 2:
+                                val = parts[1].strip().lower()
+                                return val in ['true', '1', 'yes']
+            except Exception as e:
+                print(f"⚠️ Warning: Failed to read .env at {path}: {e}")
+    return False
+
 class NaraRecommender:
     def __init__(self):
         print("📂 NaraRecommender: Loading master recipe database ...")
@@ -285,7 +310,8 @@ class NaraRecommender:
         )
         
         user_allergies = {a.lower().strip() for a in user_profile.get("allergies", [])}
-        indonesian_only = user_profile.get("indonesian_only", False)
+        global_indonesian_only = load_env_indonesian_only()
+        indonesian_only = user_profile.get("indonesian_only", global_indonesian_only)
         
         # ── 3. Fast Allergen Filter Stage (Pre-parsed List Indexing) ──
         valid_indices = []
@@ -534,8 +560,7 @@ def run_demo():
         "goal": "weight_loss",
         "allergies": ["gluten allergy"],
         "province": "Jawa Barat",
-        "clinical_conditions": [],
-        "indonesian_only": True
+        "clinical_conditions": []
     }
     
     print("\n-------------------------------------------------------")
@@ -574,8 +599,7 @@ def run_demo():
         "goal": "weight_loss",
         "allergies": ["gluten allergy"],
         "province": "Papua",
-        "clinical_conditions": [],
-        "indonesian_only": True
+        "clinical_conditions": []
     }
     
     print("\n-------------------------------------------------------")
