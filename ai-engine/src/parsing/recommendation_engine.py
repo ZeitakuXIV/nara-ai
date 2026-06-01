@@ -100,10 +100,10 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         "bmr": round(bmr, 1),
         "tdee": round(tdee, 1),
         "caloric_target_daily": round(cal_target, 1),
-        "caloric_target_meal": round(cal_target / 3.5, 1),
-        "protein_target_meal": round(protein_g / 3.5, 1),
-        "fat_target_meal": round(fat_g / 3.5, 1),
-        "carbohydrates_target_meal": round(carb_g / 3.5, 1)
+        "caloric_target_meal": round(cal_target / 3.0, 1),
+        "protein_target_meal": round(protein_g / 3.0, 1),
+        "fat_target_meal": round(fat_g / 3.0, 1),
+        "carbohydrates_target_meal": round(carb_g / 3.0, 1)
     }
 
 # ──────────────────────────────────────────────
