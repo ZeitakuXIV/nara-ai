@@ -6,8 +6,25 @@ def build_master_allergen():
     
     # Buat folder master jika belum ada
     master_dir = 'datasets/master'
+    output_path = os.path.join(master_dir, 'master_allergen_dictionary.csv')
     if not os.path.exists(master_dir):
         os.makedirs(master_dir)
+        
+    # Check if raw files exist
+    raw_files = [
+        'datasets/allergen2/food_ingredients_and_allergens.csv',
+        'datasets/allergen/FoodData.csv',
+        'datasets/allergen3/allergies_10k.csv'
+    ]
+    missing_files = [f for f in raw_files if not os.path.exists(f)]
+    if missing_files:
+        if os.path.exists(output_path):
+            print(f"⚠️ Raw files {missing_files} are missing (gitignored).")
+            print(f"   Since the compiled database already exists at {output_path}, skipping generation.")
+            print("="*40)
+            return
+        else:
+            raise FileNotFoundError(f"Missing required raw files: {missing_files} and no pre-compiled master database exists.")
     
     # 1. Cleaning allergen2 (Data paling kotor)
     df2 = pd.read_csv('datasets/allergen2/food_ingredients_and_allergens.csv')

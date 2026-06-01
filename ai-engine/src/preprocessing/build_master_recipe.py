@@ -24,8 +24,25 @@ def clean_text_fractions(text):
 def build_master_recipe():
     print("🚀 Memulai pembangunan Master Recipe Database...")
     master_dir = 'datasets/master'
+    output_path = os.path.join(master_dir, 'master_recipe_database.csv')
     if not os.path.exists(master_dir):
         os.makedirs(master_dir)
+
+    # Check if raw files exist (recipe2 and recipe4 are gitignored)
+    raw_files = [
+        'datasets/recipe/recipes.csv',
+        'datasets/recipe2/food_recipes.csv',
+        'datasets/recipe4/dataset/full_dataset.csv'
+    ]
+    missing_files = [f for f in raw_files if not os.path.exists(f)]
+    if missing_files:
+        if os.path.exists(output_path):
+            print(f"⚠️ Raw recipe files {missing_files} are missing (gitignored).")
+            print(f"   Since the compiled database already exists at {output_path}, skipping generation.")
+            print("="*40)
+            return
+        else:
+            raise FileNotFoundError(f"Missing required raw files: {missing_files} and no pre-compiled master database exists.")
 
     all_recipes = []
 

@@ -82,6 +82,7 @@ def main():
             ("preprocessing (recipe)", "src/preprocessing/build_master_recipe.py"),
             ("imputation (expert rules)", "src/imputation/impute_expert.py"),
             ("nlp recipe parsing", "src/parsing/recipe_advanced_parser.py"),
+            ("recipe nutrition compilation", "src/preprocessing/build_recipe_nutrition.py"),
             ("eda analysis", "src/analysis/run_eda.py"),
             ("eda report converter", "src/analysis/convert_report.py"),
         ]
@@ -106,6 +107,8 @@ def main():
         run_script("src/preprocessing/standardize_allergen.py")
         run_script("src/preprocessing/build_master_nutrition.py")
         run_script("src/preprocessing/build_master_recipe.py")
+        run_script("src/parsing/recipe_advanced_parser.py")
+        run_script("src/preprocessing/build_recipe_nutrition.py")
         
     if args.impute:
         run_script("src/imputation/impute_expert.py")

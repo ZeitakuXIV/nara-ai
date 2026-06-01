@@ -5,6 +5,7 @@ def build_master_nutrition():
     print("🚀 Memulai pembangunan Master Nutrition Database...")
     
     master_dir = 'datasets/master'
+    output_path = os.path.join(master_dir, 'master_nutrition_database.csv')
     if not os.path.exists(master_dir):
         os.makedirs(master_dir)
 
@@ -16,6 +17,16 @@ def build_master_nutrition():
         'datasets/nutrition/FINAL FOOD DATASET/FOOD-DATA-GROUP4.csv',
         'datasets/nutrition/FINAL FOOD DATASET/FOOD-DATA-GROUP5.csv'
     ]
+    
+    missing_files = [f for f in group_files if not os.path.exists(f)]
+    if missing_files:
+        if os.path.exists(output_path):
+            print(f"⚠️ Raw group files {missing_files} are missing (gitignored).")
+            print(f"   Since the compiled database already exists at {output_path}, skipping generation.")
+            print("="*40)
+            return
+        else:
+            raise FileNotFoundError(f"Missing required raw files: {missing_files} and no pre-compiled master database exists.")
     
     group_list = []
     for f in group_files:
