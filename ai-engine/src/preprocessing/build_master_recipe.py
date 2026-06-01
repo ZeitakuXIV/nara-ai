@@ -28,63 +28,75 @@ def build_master_recipe():
     if not os.path.exists(master_dir):
         os.makedirs(master_dir)
 
-    # Check if raw files exist (recipe2 and recipe4 are gitignored)
-    raw_files = [
-        'datasets/recipe/recipes.csv',
-        'datasets/recipe2/food_recipes.csv',
-        'datasets/recipe4/dataset/full_dataset.csv'
-    ]
-    missing_files = [f for f in raw_files if not os.path.exists(f)]
-    if missing_files:
-        if os.path.exists(output_path):
-            print(f"⚠️ Raw recipe files {missing_files} are missing (gitignored).")
-            print(f"   Since the compiled database already exists at {output_path}, skipping generation.")
-            print("="*40)
-            return
-        else:
-            raise FileNotFoundError(f"Missing required raw files: {missing_files} and no pre-compiled master database exists.")
-
     all_recipes = []
 
     # 1. Processing datasets/recipe/recipes.csv
-    print("📦 Processing recipe/recipes.csv...")
-    df1 = pd.read_csv('datasets/recipe/recipes.csv')
-    df1_mapped = pd.DataFrame({
-        'title': df1['recipe_name'],
-        'ingredients': df1['ingredients'],
-        'instructions': df1['directions'],
-        'source': 'allrecipes',
-        'image_url': df1['img_src']
-    })
-    all_recipes.append(df1_mapped)
+    recipes_csv_path = 'datasets/recipe/recipes.csv'
+    if os.path.exists(recipes_csv_path):
+        print(f"📦 Processing {recipes_csv_path}...")
+        df1 = pd.read_csv(recipes_csv_path)
+        df1_mapped = pd.DataFrame({
+            'title': df1['recipe_name'],
+            'ingredients': df1['ingredients'],
+            'instructions': df1['directions'],
+            'source': 'allrecipes',
+            'image_url': df1['img_src']
+        })
+        all_recipes.append(df1_mapped)
+    else:
+        print(f"⚠️ {recipes_csv_path} is missing.")
 
-    # 2. Processing datasets/recipe2/food_recipes.csv
-    print("📦 Processing recipe2/food_recipes.csv...")
-    df2 = pd.read_csv('datasets/recipe2/food_recipes.csv')
-    # Convert '|' separated ingredients to comma separated for consistency
-    df2['ingredients'] = df2['ingredients'].str.replace('|', ', ', regex=False)
-    df2_mapped = pd.DataFrame({
-        'title': df2['recipe_title'],
-        'ingredients': df2['ingredients'],
-        'instructions': df2['instructions'],
-        'source': 'archanaskitchen',
-        'image_url': None
-    })
-    all_recipes.append(df2_mapped)
+    # 2. Processing datasets/recipe/indonesian_recipes.csv
+    indo_recipes_path = 'datasets/recipe/indonesian_recipes.csv'
+    if os.path.exists(indo_recipes_path):
+        print(f"📦 Processing {indo_recipes_path}...")
+        df_indo = pd.read_csv(indo_recipes_path)
+        df_indo_mapped = pd.DataFrame({
+            'title': df_indo['recipe_name'],
+            'ingredients': df_indo['ingredients'],
+            'instructions': df_indo['directions'],
+            'source': 'indonesian_local',
+            'image_url': df_indo['img_src']
+        })
+        all_recipes.append(df_indo_mapped)
+    else:
+        print(f"⚠️ {indo_recipes_path} is missing.")
 
-    # 3. Processing datasets/recipe4/dataset/full_dataset.csv (Sampling to avoid memory issues)
-    print("📦 Processing recipe4 (Sampling 10,000 rows)...")
-    # Reading first 10k rows of the 2.1GB file
-    df4 = pd.read_csv('datasets/recipe4/dataset/full_dataset.csv', nrows=10000)
-    # The 'ingredients' and 'directions' in recipe4 are stringified lists
-    df4_mapped = pd.DataFrame({
-        'title': df4['title'],
-        'ingredients': df4['ingredients'],
-        'instructions': df4['directions'],
-        'source': 'gathered',
-        'image_url': None
-    })
-    all_recipes.append(df4_mapped)
+    # 3. Processing datasets/recipe2/food_recipes.csv
+    recipe2_path = 'datasets/recipe2/food_recipes.csv'
+    if os.path.exists(recipe2_path):
+        print(f"📦 Processing {recipe2_path}...")
+        df2 = pd.read_csv(recipe2_path)
+        df2['ingredients'] = df2['ingredients'].str.replace('|', ', ', regex=False)
+        df2_mapped = pd.DataFrame({
+            'title': df2['recipe_title'],
+            'ingredients': df2['ingredients'],
+            'instructions': df2['instructions'],
+            'source': 'archanaskitchen',
+            'image_url': None
+        })
+        all_recipes.append(df2_mapped)
+    else:
+        print(f"⚠️ {recipe2_path} is missing (gitignored).")
+
+    # 4. Processing datasets/recipe4/dataset/full_dataset.csv
+    recipe4_path = 'datasets/recipe4/dataset/full_dataset.csv'
+    if os.path.exists(recipe4_path):
+        print(f"📦 Processing {recipe4_path} (Sampling 10,000 rows)...")
+        df4 = pd.read_csv(recipe4_path, nrows=10000)
+        df4_mapped = pd.DataFrame({
+            'title': df4['title'],
+            'ingredients': df4['ingredients'],
+            'instructions': df4['directions'],
+            'source': 'gathered',
+            'image_url': None
+        })
+        all_recipes.append(df4_mapped)
+    else:
+        print(f"⚠️ {recipe4_path} is missing (gitignored).")
+
+    if not all_recipes:
+        raise FileNotFoundError("No raw recipe files found to build the Master Recipe Database.")
 
     # Combine all
     master_df = pd.concat(all_recipes, ignore_index=True)

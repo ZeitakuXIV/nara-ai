@@ -1,0 +1,172 @@
+import pandas as pd
+import os
+
+def generate_indonesian_recipes():
+    print("🇮🇩 Menghasilkan data resep masakan Indonesia berkualitas tinggi...")
+    
+    recipes = [
+        {
+            "recipe_name": "Nasi Goreng Ayam (Indonesian Chicken Fried Rice)",
+            "ingredients": "3 cups cooked jasmine rice, 200 grams chicken breast chopped, 2 large eggs beaten, 4 cloves garlic minced, 3 shallots sliced, 3 tablespoons sweet soy sauce, 1 tablespoon vegetable oil, 1 teaspoon salt, 1 pinch black pepper",
+            "directions": "Heat vegetable oil in a large wok over medium-high heat. Add minced garlic and sliced shallots, sauté until fragrant. Add chopped chicken breast and cook until no longer pink. Push chicken to the side, pour in beaten eggs, and scramble until cooked. Add cooked jasmine rice, sweet soy sauce, salt, and black pepper. Stir-fry constantly on high heat for 3-4 minutes until the rice is evenly coated and slightly caramelized. Serve hot, garnished with fresh sliced cucumber or a fried egg.",
+            "img_src": "https://asset.kompas.com/crops/2RnTJZK6E9ABjS_1qmItNjI1hls=/0x0:5760x3840/750x500/data/photo/2023/02/14/63eb12fb840da.jpg"
+        },
+        {
+            "recipe_name": "Sate Ayam Madura (Chicken Satay with Peanut Sauce)",
+            "ingredients": "500 grams chicken breast cut into cubes, 1/2 cup peanut butter, 4 tablespoons sweet soy sauce, 3 cloves garlic, 4 shallots, 1 tablespoon lime juice, 2 tablespoons palm sugar, 1 cup water, 1 teaspoon salt",
+            "directions": "Thread the cubed chicken breasts onto bamboo skewers. Grill or pan-fry the skewers until charred and cooked through, about 3-4 minutes per side. For the peanut sauce: Blend peanut butter, sweet soy sauce, garlic, shallots, palm sugar, salt, and water in a blender until smooth. Pour into a small saucepan and simmer over low heat until thickened and oil separates. Drizzle lime juice over the sauce. Serve satay skewers hot, smothered in the rich peanut sauce, topped with sliced shallots.",
+            "img_src": "https://img-global.cpcdn.com/recipes/5b1b44ec2501bc5b/1200x630cq70/photo.jpg"
+        },
+        {
+            "recipe_name": "Soto Ayam (Indonesian Spiced Chicken Soup)",
+            "ingredients": "300 grams chicken breast, 100 grams rice vermicelli soaked, 1 cup shredded cabbage, 1/2 cup bean sprouts, 2 hard boiled eggs halved, 2 stalks lemongrass bruised, 1 inch ginger bruised, 1 teaspoon turmeric powder, 4 cloves garlic, 4 shallots, 1 tablespoon lime juice, 4 cups water, 1 teaspoon salt",
+            "directions": "In a large pot, bring chicken breast and 4 cups of water to a boil. Simmer until chicken is cooked, then remove, shred, and set aside. Blend garlic, shallots, ginger, turmeric, and salt into a smooth spice paste. Sauté the paste with bruised lemongrass in a separate pan until fragrant, then stir it back into the chicken boiling broth. Bring broth to a simmer. To assemble: Place soaked rice vermicelli, cabbage, bean sprouts, and shredded chicken in serving bowls. Ladle hot spiced broth over them. Garnish with hard-boiled egg halves, celery, and a squeeze of fresh lime juice.",
+            "img_src": "https://asset.kompas.com/crops/z7_4ZpLh3wD6_zXpB0FvM2E4P3E=/0x0:1000x667/780x390/data/photo/2021/08/13/611680d9229f3.jpg"
+        },
+        {
+            "recipe_name": "Rendang Daging Sapi (Sumatran Slow-Cooked Beef Rendang)",
+            "ingredients": "500 grams beef chuck cut into chunks, 2 cups coconut milk, 2 stalks lemongrass bruised, 1 inch ginger, 4 cloves garlic, 6 shallots, 1 inch galangal, 1 teaspoon turmeric powder, 3 dry red chillies, 1 tablespoon ground coriander, 1 teaspoon salt, 1 tablespoon palm sugar",
+            "directions": "Blend ginger, garlic, shallots, galangal, turmeric, and red chillies with a little water to make a smooth spice paste. In a heavy-bottomed pot or Dutch oven, combine the spice paste, coconut milk, ground coriander, salt, palm sugar, and bruised lemongrass. Bring to a boil, stirring constantly. Add the beef chunks and reduce heat to low. Slow cook uncovered, stirring occasionally, for 3 to 4 hours until the liquid completely evaporates and the beef turns dark brown, tender, and caramelized in its own oil. Serve warm.",
+            "img_src": "https://asset.kompas.com/crops/h919v0v5B-Rk_296S5n4P82qf5E=/0x113:1000x780/750x500/data/photo/2020/06/29/5ef9d984bbf63.jpg"
+        },
+        {
+            "recipe_name": "Gado-Gado (Indonesian Vegetable Salad with Warm Peanut Sauce)",
+            "ingredients": "150 grams tofu cubed, 150 grams tempeh cubed, 2 hard boiled eggs halved, 1 cup spinach blanched, 1 cup cabbage shredded, 1/2 cup bean sprouts blanched, 1 medium potato boiled and cubed, 1/2 cup peanut butter, 3 tablespoons sweet soy sauce, 2 cloves garlic, 1 tablespoon tamarind juice, 1/2 cup water, 1 teaspoon salt, 1 tablespoon vegetable oil",
+            "directions": "Pan-fry the cubed tofu and tempeh in a little vegetable oil until golden brown on all sides. Arrange blanched spinach, cabbage, bean sprouts, boiled potato cubes, fried tofu, fried tempeh, and hard-boiled eggs on a platter. For the sauce: Blend peanut butter, sweet soy sauce, garlic, tamarind juice, water, and salt. Simmer in a small pan until warm and thick. Pour the warm peanut sauce generously over the vegetables and protein. Serve immediately with crackers.",
+            "img_src": "https://asset.kompas.com/crops/98T377Hq3LwN2XN4k7v0Nn0m2E4=/0x0:1000x667/780x390/data/photo/2021/08/11/6113b2d6a54b3.jpg"
+        },
+        {
+            "recipe_name": "Bakso Sapi (Indonesian Beef Meatball Soup)",
+            "ingredients": "12 pieces beef meatballs, 100 grams egg noodles, 100 grams rice vermicelli, 1 cup bok choy, 2 cloves garlic minced, 4 cups beef broth, 1 teaspoon salt, 1/2 teaspoon white pepper, 1 tablespoon vegetable oil, 2 tablespoons fried shallots",
+            "directions": "Heat vegetable oil in a soup pot. Add minced garlic, sauté until light golden brown. Pour in beef broth and bring to a rolling boil. Add beef meatballs, reduce heat, and simmer until meatballs float to the top, about 5-7 minutes. Season with salt and white pepper. Blance bok choy, egg noodles, and rice vermicelli in hot water, then divide into serving bowls. Ladle the hot soup and meatballs over the noodles. Garnish generously with celery leaves and fried shallots.",
+            "img_src": "https://asset.kompas.com/crops/P3v7Pq0Kk9zD29k2zP2x2z9k2xE=/0x0:1000x667/780x390/data/photo/2021/08/12/6114e0d9229f3.jpg"
+        },
+        {
+            "recipe_name": "Opor Ayam Kampung (White Coconut Chicken Curry)",
+            "ingredients": "400 grams chicken breast cut into pieces, 1.5 cups coconut milk, 1 teaspoon ground coriander, 1/2 teaspoon ground cumin, 2 stalks lemongrass, 1 inch ginger, 3 cloves garlic, 4 shallots, 2 bay leaves, 1 teaspoon salt, 1 teaspoon sugar",
+            "directions": "Blend garlic, shallots, ginger, coriander, cumin, and salt into a paste. Sauté the paste with lemongrass and bay leaves in a pot until highly aromatic. Add the chicken pieces and stir until they are sealed on the outside. Pour in coconut milk and sugar. Bring to a gentle boil, then simmer on low heat for 20 minutes until the chicken is tender and the curry is rich and flavorful. Serve hot, topped with crispy fried shallots.",
+            "img_src": "https://asset.kompas.com/crops/z7_4ZpLh3wD6_zXpB0FvM2E4P3E=/0x0:1000x667/780x390/data/photo/2021/08/13/611680d9229f3.jpg"
+        },
+        {
+            "recipe_name": "Tempe Bacem (Javanese Sweet Braised Tempeh)",
+            "ingredients": "300 grams tempeh sliced, 1.5 cups coconut water, 4 tablespoons sweet soy sauce, 1 teaspoon ground coriander, 3 cloves garlic, 3 shallots, 1 tablespoon tamarind juice, 2 tablespoons palm sugar, 1 teaspoon salt, 1 tablespoon vegetable oil",
+            "directions": "Blend garlic, shallots, coriander, and salt. Sauté the paste with a little oil in a saucepan until fragrant. Add coconut water, sweet soy sauce, palm sugar, tamarind juice, and sliced tempeh. Bring to a simmer over medium-low heat. Cook uncovered until the liquid is fully absorbed by the tempeh, turning once. Remove the tempeh. Pan-fry the braised tempeh in a tablespoon of oil for 1-2 minutes per side until slightly caramelized on the edges. Serve warm.",
+            "img_src": "https://img-global.cpcdn.com/recipes/5b1b44ec2501bc5b/1200x630cq70/photo.jpg"
+        },
+        {
+            "recipe_name": "Sayur Asem (Sundanese Tamarind Vegetable Soup)",
+            "ingredients": "1 tablespoon tamarind pulp, 1 piece sweet corn cut into chunks, 1 cup cabbage, 1/4 cup raw peanuts, 1 cup long beans cut into segments, 1 chayote peeled and cubed, 3 cloves garlic, 3 shallots, 1 red chili, 4 cups water, 1 teaspoon salt",
+            "directions": "In a soup pot, bring 4 cups of water to a boil. Add raw peanuts and sweet corn chunks, boil for 10 minutes. Blend garlic, shallots, and red chili, then add to the pot. Add cubed chayote, long beans, cabbage, and tamarind pulp dissolved in warm water. Season with salt. Simmer for another 8-10 minutes until all vegetables are perfectly tender. The broth should be refreshing, tangy, and slightly spicy.",
+            "img_src": "https://asset.kompas.com/crops/98T377Hq3LwN2XN4k7v0Nn0m2E4=/0x0:1000x667/780x390/data/photo/2021/08/11/6113b2d6a54b3.jpg"
+        },
+        {
+            "recipe_name": "Sayur Lodeh (Javanese Vegetable Coconut Soup)",
+            "ingredients": "1.5 cups coconut milk, 1 cup cabbage chopped, 1 cup long beans chopped, 1 eggplant cubed, 100 grams tempeh cubed, 100 grams tofu cubed, 3 cloves garlic, 4 shallots, 2 red chillies, 1 teaspoon ground coriander, 1 teaspoon salt, 1 teaspoon sugar",
+            "directions": "Blend garlic, shallots, red chillies, coriander, and salt. In a pot, combine coconut milk, the spice paste, and sugar. Bring to a gentle boil, stirring constantly. Add cubed eggplant, tempeh, tofu, long beans, and cabbage. Simmer over low heat for 12-15 minutes until vegetables are cooked through and the broth is creamy. Serve warm.",
+            "img_src": "https://asset.kompas.com/crops/98T377Hq3LwN2XN4k7v0Nn0m2E4=/0x0:1000x667/780x390/data/photo/2021/08/11/6113b2d6a54b3.jpg"
+        },
+        {
+            "recipe_name": "Ayam Bakar Taliwang (Lombok Spicy Grilled Chicken)",
+            "ingredients": "400 grams chicken breast, 3 red chillies, 3 cloves garlic, 4 shallots, 1 teaspoon shrimp paste, 1 medium tomato, 1 tablespoon lime juice, 1 tablespoon brown sugar, 1 teaspoon salt, 1 tablespoon vegetable oil",
+            "directions": "Blend chillies, garlic, shallots, shrimp paste, and tomato. Sauté the paste in a tablespoon of oil until fragrant. Coat chicken breast in the paste, then simmer in a pan with a little water for 10 minutes until chicken is par-cooked. Transfer chicken to a grill or grill pan. Grill the chicken, basting frequently with the remaining spice paste, until charred and fully cooked, about 5 minutes per side. Drizzle with lime juice before serving.",
+            "img_src": "https://asset.kompas.com/crops/z7_4ZpLh3wD6_zXpB0FvM2E4P3E=/0x0:1000x667/780x390/data/photo/2021/08/13/611680d9229f3.jpg"
+        },
+        {
+            "recipe_name": "Pepes Ikan Kembung (Spiced Mackerel Steamed in Banana Leaf)",
+            "ingredients": "300 grams mackerel fish cleaned, 3 cloves garlic, 4 shallots, 1 inch ginger, 1 teaspoon turmeric powder, 2 red chillies, 1 tomato sliced, 2 stalks lemongrass sliced, 1 cup basil leaves, 1 teaspoon salt, 1 teaspoon sugar",
+            "directions": "Blend garlic, shallots, ginger, turmeric, chillies, salt, and sugar into a paste. Cover the mackerel fish thoroughly in the spice paste, sliced tomato, sliced lemongrass, and fresh basil leaves. Wrap the fish tightly in banana leaves (or aluminum foil) and secure the ends. Steam the packet for 20 minutes. Optionally, pan-sear the wrapped fish for 2 minutes per side to add a smoky aroma. Unwrap and serve hot.",
+            "img_src": "https://img.kurio.network/P1Obhh7cenTadrAZ6Hc_XPjaVws=/1200x1200/filters:quality(80)/https://kurio-img.kurioapps.com/21/09/01/53606332-ec0c-478c-add9-78815b5cc658.jpe"
+        },
+        {
+            "recipe_name": "Pecel Sayur Madiun (Javanese Steamed Vegetables with Spicy Peanut Sauce)",
+            "ingredients": "1 cup spinach blanched, 1 cup bean sprouts blanched, 1 cup cabbage blanched, 1 cup long beans blanched, 1/2 cup peanuts roasted, 2 cloves garlic, 2 red chillies, 1 tablespoon tamarind juice, 2 tablespoons palm sugar, 1 lime leaf, 1 teaspoon salt, 1/2 cup warm water",
+            "directions": "Arrange all blanched spinach, bean sprouts, cabbage, and long beans on a platter. For the pecel sauce: Grind roasted peanuts, garlic, chillies, palm sugar, lime leaf, and salt into a fine powder. Dissolve the powder in warm water and tamarind juice to form a smooth, pouring consistency. Pour the peanut sauce over the steamed vegetables just before serving.",
+            "img_src": "https://asset.kompas.com/crops/98T377Hq3LwN2XN4k7v0Nn0m2E4=/0x0:1000x667/780x390/data/photo/2021/08/11/6113b2d6a54b3.jpg"
+        },
+        {
+            "recipe_name": "Semur Daging Sapi (Sweet Soy Beef Stew)",
+            "ingredients": "400 grams beef cut into cubes, 4 tablespoons sweet soy sauce, 1/4 teaspoon nutmeg powder, 2 cloves cloves whole, 3 cloves garlic, 3 shallots, 1 medium tomato sliced, 2 medium potatoes cubed, 2 cups water, 1 teaspoon salt",
+            "directions": "Blend garlic and shallots. Sauté the paste in a pot until fragrant. Add beef cubes and cook until brown. Pour in sweet soy sauce, nutmeg, cloves, salt, and water. Bring to a boil, then cover and simmer over low heat. After 20 minutes, add cubed potatoes. Continue to simmer for another 20 minutes until the beef and potatoes are meltingly tender, and the sauce is dark and rich. Stir in sliced tomatoes 2 minutes before finishing.",
+            "img_src": "https://asset.kompas.com/crops/h919v0v5B-Rk_296S5n4P82qf5E=/0x113:1000x780/750x500/data/photo/2020/06/29/5ef9d984bbf63.jpg"
+        },
+        {
+            "recipe_name": "Rawon Daging (East Javanese Black Beef Soup)",
+            "ingredients": "400 grams beef cut into cubes, 3 pieces keluak nuts pulp extracted, 1 stalk lemongrass bruised, 1 inch ginger, 3 cloves garlic, 5 shallots, 1 teaspoon ground coriander, 1 teaspoon turmeric powder, 2 spring onions chopped, 4 cups water, 1 teaspoon salt",
+            "directions": "Soak keluak pulp in hot water for 5 minutes, then blend with garlic, shallots, ginger, coriander, turmeric, and salt. Sauté the paste in a pot with lemongrass until fragrant. Add beef cubes and cook for 2 minutes. Pour in water and bring to a boil. Reduce heat, cover, and slow-cook for 1.5 hours until beef is tender. Garnish with chopped spring onions. Serve hot with short bean sprouts and salted egg.",
+            "img_src": "https://asset.kompas.com/crops/h919v0v5B-Rk_296S5n4P82qf5E=/0x113:1000x780/750x500/data/photo/2020/06/29/5ef9d984bbf63.jpg"
+        },
+        {
+            "recipe_name": "Sate Kambing (Indonesian Lamb Satay)",
+            "ingredients": "400 grams lamb cut into cubes, 6 tablespoons sweet soy sauce, 4 shallots sliced, 3 red chillies sliced, 1 medium tomato cubed, 1/2 teaspoon ground black pepper, 1/2 teaspoon salt, 1 tablespoon lime juice",
+            "directions": "Thread cubed lamb onto skewers. Grill satay skewers over hot coals or in a grill pan until cooked to medium-well, about 2-3 minutes per side. For the dipping sauce: Mix sweet soy sauce, sliced shallots, sliced chillies, cubed tomato, black pepper, salt, and lime juice in a bowl. Serve the hot lamb skewers immediately with the seasoned sweet soy dipping sauce.",
+            "img_src": "https://img-global.cpcdn.com/recipes/5b1b44ec2501bc5b/1200x630cq70/photo.jpg"
+        },
+        {
+            "recipe_name": "Ketoprak Jakarta (Tofu, Vermicelli, and Bean Sprout Salad)",
+            "ingredients": "200 grams tofu cubed, 100 grams rice vermicelli soaked, 1 cup bean sprouts blanched, 2 pieces rice cake cubed, 1/2 cup peanut butter, 2 cloves garlic, 3 tablespoons sweet soy sauce, 2 red chillies, 1/2 cup warm water, 1 teaspoon salt",
+            "directions": "Pan-fry the cubed tofu until golden brown and crispy. Arrange cubed rice cake, soaked rice vermicelli, blanched bean sprouts, and fried tofu on a plate. Sauté or crush garlic, chili, peanut butter, salt, sweet soy sauce, and warm water together to form a rich peanut dressing. Pour the dressing over the ingredients, drizzle with extra sweet soy sauce, and top with crackers.",
+            "img_src": "https://asset.kompas.com/crops/98T377Hq3LwN2XN4k7v0Nn0m2E4=/0x0:1000x667/780x390/data/photo/2021/08/11/6113b2d6a54b3.jpg"
+        },
+        {
+            "recipe_name": "Nasi Uduk Betawi (Lemongrass Coconut Rice)",
+            "ingredients": "3 cups jasmine rice washed, 1.5 cups coconut milk, 2 stalks lemongrass bruised, 2 bay leaves, 1 pandan leaf knotted, 1 inch ginger sliced, 1 teaspoon salt, 1 cup water",
+            "directions": "In a rice cooker bowl, combine washed jasmine rice, coconut milk, water, bruised lemongrass, bay leaves, pandan leaf, ginger, and salt. Stir well to dissolve the salt. Turn on the rice cooker. Once cooked, let the rice steam for 10 minutes inside the cooker, then fluff with a fork. It should be highly aromatic, savory, and perfectly fluffy. Serve with fried shallots.",
+            "img_src": "https://www.frisianflag.com/storage/app/media/uploaded-files/nasi-uduk-betawi.jpg"
+        },
+        {
+            "recipe_name": "Capcay Ayam (Stir-Fried Vegetables and Chicken)",
+            "ingredients": "150 grams chicken breast sliced, 1 cup cabbage chopped, 1 medium carrot sliced, 1 cup broccoli florets, 1 cup cauliflower florets, 3 cloves garlic minced, 3 shallots sliced, 2 tablespoons oyster sauce, 1 teaspoon cornstarch dissolved in water, 1 tablespoon vegetable oil, 1/2 cup water, 1 teaspoon salt",
+            "directions": "Heat vegetable oil in a wok. Sauté minced garlic and shallots until fragrant. Add sliced chicken breast and stir-fry until cooked. Add sliced carrot, broccoli, and cauliflower, stir-fry on high heat for 2 minutes. Pour in water and oyster sauce, season with salt. Cover and let steam for 2 minutes. Add cabbage, stir, and pour in cornstarch slurry. Cook until the sauce thickens and vegetables are tender-crisp. Serve hot.",
+            "img_src": "https://asset.kompas.com/crops/2RnTJZK6E9ABjS_1qmItNjI1hls=/0x0:5760x3840/750x500/data/photo/2023/02/14/63eb12fb840da.jpg"
+        },
+        {
+            "recipe_name": "Perkedel Kentang (Indonesian Savory Potato Fritters)",
+            "ingredients": "500 grams potatoes peeled and sliced, 1 large egg beaten, 3 shallots sliced, 1 stalk celery finely chopped, 1/4 teaspoon nutmeg powder, 1 teaspoon salt, 1/2 teaspoon white pepper, 1 cup vegetable oil for deep frying",
+            "directions": "Deep-fry the sliced potatoes in hot vegetable oil until golden and soft. Transfer to a bowl and mash until completely smooth. Pan-fry the sliced shallots until crispy, then crush and add to the mashed potato along with chopped celery, nutmeg, salt, white pepper, and half of the beaten egg. Mix thoroughly. Shape the mixture into oval patties. Dip each patty in the remaining beaten egg. Shallow-fry in hot oil until beautiful golden brown on both sides. Serve hot.",
+            "img_src": "https://img.kurio.network/P1Obhh7cenTadrAZ6Hc_XPjaVws=/1200x1200/filters:quality(80)/https://kurio-img.kurioapps.com/21/09/01/53606332-ec0c-478c-add9-78815b5cc658.jpe"
+        },
+        {
+            "recipe_name": "Tumis Tempe Kecap (Stir-Fried Tempeh in Sweet Soy Sauce)",
+            "ingredients": "300 grams tempeh cubed, 4 tablespoons sweet soy sauce, 3 cloves garlic, 3 shallots, 2 green chillies sliced, 1 inch galangal bruised, 2 bay leaves, 1 teaspoon salt, 1/4 cup water, 2 tablespoons vegetable oil",
+            "directions": "Deep-fry or pan-fry cubed tempeh until light golden brown and slightly crispy, set aside. Heat vegetable oil in a pan, sauté garlic, shallots, sliced green chillies, galangal, and bay leaves until fragrant. Reintroduce the fried tempeh. Add sweet soy sauce, salt, and water. Stir-fry over medium heat until the sauce caramelizes and coats the tempeh evenly. Serve hot.",
+            "img_src": "https://img-global.cpcdn.com/recipes/5b1b44ec2501bc5b/1200x630cq70/photo.jpg"
+        },
+        {
+            "recipe_name": "Mie Goreng Jawa (Javanese Fried Noodles with Chicken)",
+            "ingredients": "200 grams egg noodles, 100 grams chicken breast sliced, 1 cup cabbage chopped, 1 large egg, 3 tablespoons sweet soy sauce, 3 cloves garlic, 2 shallots, 2 candlenuts crushed, 1 teaspoon salt, 1/2 teaspoon black pepper, 1 tablespoon vegetable oil",
+            "directions": "Boil egg noodles in water until al dente, drain and toss with 1 tablespoon sweet soy sauce and a little oil. Blend garlic, shallots, candlenuts, salt, and black pepper. Heat oil in a wok, sauté the spice paste until fragrant. Add chicken slice and stir-fry until cooked. Push ingredients to the side, scramble the egg. Add cabbage and stir-fry for 1 minute. Add noodles, remaining sweet soy sauce, and stir-fry on high heat for 3 minutes until smokey and well combined. Serve hot.",
+            "img_src": "https://asset.kompas.com/crops/2RnTJZK6E9ABjS_1qmItNjI1hls=/0x0:5760x3840/750x500/data/photo/2023/02/14/63eb12fb840da.jpg"
+        },
+        {
+            "recipe_name": "Pepes Tahu Kemangi (Spiced Steamed Tofu in Banana Leaf)",
+            "ingredients": "300 grams tofu mashed, 1 large egg, 1 cup fresh basil leaves, 1 medium tomato chopped, 3 cloves garlic, 3 shallots, 2 red chillies, 1 teaspoon salt, 1 teaspoon sugar",
+            "directions": "Blend garlic, shallots, red chillies, salt, and sugar into a spice paste. Combine mashed tofu, egg, the spice paste, chopped tomato, and fresh basil leaves in a bowl, mix thoroughly. Divide the mixture into 4 portions. Wrap each portion in banana leaf (or aluminum foil), folding and securing the ends. Steam the packets for 20 minutes over medium heat. Pan-sear the steamed packets for 1-2 minutes per side for a smokey flavor. Serve hot.",
+            "img_src": "https://img.kurio.network/P1Obhh7cenTadrAZ6Hc_XPjaVws=/1200x1200/filters:quality(80)/https://kurio-img.kurioapps.com/21/09/01/53606332-ec0c-478c-add9-78815b5cc658.jpe"
+        },
+        {
+            "recipe_name": "Sate Lilit Ikan (Balinese Grilled Fish Satay)",
+            "ingredients": "300 grams minced white fish, 1/2 cup grated coconut, 2 tablespoons coconut milk, 6 stalks lemongrass thick, 3 cloves garlic, 4 shallots, 1 red chili, 1 teaspoon turmeric powder, 1 inch ginger, 1 teaspoon ground coriander, 1 tablespoon brown sugar, 1 teaspoon salt",
+            "directions": "Blend garlic, shallots, chili, turmeric, ginger, coriander, salt, and brown sugar. Mix minced white fish, grated coconut, coconut milk, and the spice paste in a bowl until sticky and uniform. Divide the mixture into 6 portions. Wrap and press a portion of fish paste around the thick upper half of each lemongrass stalk. Grill the satay skewers over hot coals or in a grill pan until slightly charred and cooked through, about 3 minutes per side. Serve hot.",
+            "img_src": "https://img-global.cpcdn.com/recipes/cbf330fbd1ba6316/1200x630cq70/photo.jpg"
+        },
+        {
+            "recipe_name": "Ikan Bakar Cianjur (Indonesian Sweet Soy Grilled Fish)",
+            "ingredients": "350 grams whole mackerel fish cleaned, 4 tablespoons sweet soy sauce, 3 cloves garlic, 3 shallots, 1 teaspoon ground coriander, 1 inch ginger, 1 tablespoon lime juice, 2 red chillies, 2 tablespoons vegetable oil, 1 teaspoon salt",
+            "directions": "Make shallow diagonal cuts on both sides of the cleaned mackerel fish. Drizzle with lime juice and salt, let sit for 10 minutes. Blend garlic, shallots, coriander, ginger, chillies, and salt. Sauté the paste in a little oil until fragrant, then mix with sweet soy sauce. Coat the fish thoroughly in the sweet soy spice paste. Grill the fish over hot charcoal or in a preheated grill pan, brushing regularly with the sweet soy mixture, for 5-6 minutes per side until beautifully charred and cooked. Serve hot."
+        }
+    ]
+    
+    df = pd.DataFrame(recipes)
+    output_dir = "datasets/recipe"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
+    output_path = os.path.join(output_dir, "indonesian_recipes.csv")
+    df.to_csv(output_path, index=False)
+    
+    print(f"✅ Data resep masakan Indonesia berhasil disimpan di: {output_path}")
+    print(f"📊 Total Resep: {len(df)}")
+    print("=" * 40)
+
+if __name__ == "__main__":
+    generate_indonesian_recipes()

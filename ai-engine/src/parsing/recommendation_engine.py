@@ -285,10 +285,15 @@ class NaraRecommender:
         )
         
         user_allergies = {a.lower().strip() for a in user_profile.get("allergies", [])}
+        indonesian_only = user_profile.get("indonesian_only", False)
         
         # ── 3. Fast Allergen Filter Stage (Pre-parsed List Indexing) ──
         valid_indices = []
         for idx, ingredients in enumerate(self.parsed_ingredients):
+            # Check source if indonesian_only is enabled
+            if indonesian_only and self.df.iloc[idx]['source'] != 'indonesian_local':
+                continue
+                
             triggers_allergy = False
             for ing in ingredients:
                 item = ing.get('item', '').lower().strip()
@@ -519,7 +524,7 @@ def run_demo():
     print("🚀 NARA AI-ENGINE: Starting Dynamic 7-Day Portion-Optimized & Diverse Meal Plan Demo ...\n")
     engine = NaraRecommender()
     
-    # ── User Profile 1: Weight Loss + Gluten Allergy + Jawa Barat ──
+    # ── User Profile 1: Weight Loss + Gluten Allergy + Jawa Barat + Pure Indonesian ──
     user1 = {
         "weight_kg": 70.0,
         "height_cm": 172.0,
@@ -529,11 +534,12 @@ def run_demo():
         "goal": "weight_loss",
         "allergies": ["gluten allergy"],
         "province": "Jawa Barat",
-        "clinical_conditions": []
+        "clinical_conditions": [],
+        "indonesian_only": True
     }
     
     print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 1: Weight Loss (Active) + Gluten Allergy + Jawa Barat")
+    print("👤 USER PROFILE 1: Weight Loss (Active) + Gluten Allergy + Jawa Barat [PURE INDONESIAN MEALS]")
     print("-------------------------------------------------------")
     res1 = engine.recommend(user1)
     if res1["status"] == "success":
@@ -542,11 +548,11 @@ def run_demo():
         print(f"🌏 Aligned Province : {res1['province_aligned']}")
         print(f"⚡ Scoring Speed    : {res1['elapsed_ms']} milliseconds! (Scored {res1['recipes_scored_realtime']} recipes)")
         
-        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (CSP Rotated) ======")
+        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (CSP Rotated - Local Indonesian) ======")
         for rec in res1["primary_schedule"]:
             print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
             print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
-            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}% | Density: {rec['density']}")
+            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}% | Density: {rec['density']:.2f}")
             print(f"     🔍 AI Rationale:")
             for exp in rec["explanations"]:
                 print(f"       👉 {exp}")
@@ -558,7 +564,7 @@ def run_demo():
             print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
             print(f"     🌏 RAS Score : {rec['regional_alignment_score']}%")
 
-    # ── User Profile 2: Papua comparison (Same parameters but different province) ──
+    # ── User Profile 2: Papua comparison (Same parameters but different province + Pure Indonesian) ──
     user2 = {
         "weight_kg": 70.0,
         "height_cm": 172.0,
@@ -568,18 +574,19 @@ def run_demo():
         "goal": "weight_loss",
         "allergies": ["gluten allergy"],
         "province": "Papua",
-        "clinical_conditions": []
+        "clinical_conditions": [],
+        "indonesian_only": True
     }
     
     print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 2: Weight Loss (Active) + Gluten Allergy + Papua (Comparison)")
+    print("👤 USER PROFILE 2: Weight Loss (Active) + Gluten Allergy + Papua [PURE INDONESIAN MEALS]")
     print("-------------------------------------------------------")
     res2 = engine.recommend(user2)
     if res2["status"] == "success":
         print(f"🌏 Aligned Province : {res2['province_aligned']}")
         print(f"⚡ Scoring Speed    : {res2['elapsed_ms']} milliseconds!")
         
-        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (BPS Papua Aligned) ======")
+        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (BPS Papua Aligned - Local Indonesian) ======")
         for rec in res2["primary_schedule"]:
             print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
             print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")

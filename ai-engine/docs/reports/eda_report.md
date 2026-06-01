@@ -7,11 +7,13 @@ This document contains the automated data quality checks, database row/column me
 | Target Database | Total Rows | Total Columns | Duplicate Records | Status |
 | :--- | :---: | :---: | :---: | :---: |
 | **FoodData.csv** | 184 | 5 | 0 | ⚠️  Incomplete |
+| **consumption.csv** | 9,519 | 7 | 0 | ⚠️  Incomplete |
 | **master_allergen_dictionary.csv** | 10,322 | 2 | 0 | ✅ Clean |
 | **master_nutrition_database.csv** | 3,741 | 36 | 0 | ✅ Clean |
 | **master_nutrition_database_imputed.csv** | 3,741 | 36 | 0 | ✅ Clean |
-| **master_recipe_database.csv** | 16,098 | 43 | 0 | ⚠️  Incomplete |
+| **master_recipe_database.csv** | 986 | 43 | 0 | ⚠️  Incomplete |
 | **housing.csv** | 505 | 1 | 0 | ✅ Clean |
+| **indonesian_recipes.csv** | 25 | 4 | 0 | ⚠️  Incomplete |
 | **nutrition.csv** | 1,346 | 7 | 0 | ✅ Clean |
 | **recipes.csv** | 1,090 | 15 | 0 | ⚠️  Incomplete |
 | **test_recipes.csv** | 59 | 11 | 0 | ⚠️  Incomplete |
@@ -25,23 +27,23 @@ These statistics are compiled by our **Recipe Nutrition Compiler**, which matche
 ### Average Recipe Nutrient Metrics (per 100g mixture)
 | Metric / Nutrient | Compiled Average Value |
 | :--- | :--- |
-| **Ingredient Match Rate** | **83.76%** (Fuzzy/Exact successfully linked) |
-| **Calories (per 100g)** | 132.47 kcal |
-| **Protein (per 100g)** | 5.35 g |
-| **Fat (per 100g)** | 5.87 g |
-| **Carbohydrates (per 100g)** | 14.66 g |
-| **Dietary Fiber (per 100g)** | 1.57 g |
+| **Ingredient Match Rate** | **78.69%** (Fuzzy/Exact successfully linked) |
+| **Calories (per 100g)** | 147.49 kcal |
+| **Protein (per 100g)** | 5.81 g |
+| **Fat (per 100g)** | 6.07 g |
+| **Carbohydrates (per 100g)** | 17.9 g |
+| **Dietary Fiber (per 100g)** | 1.69 g |
 
 ### 🏆 Top 5 Most Nutrient-Dense Recipes Showcase
 These recipes are sorted by their **Recipe Nutrition Density score** (beneficial nutrients per calorie):
 
 | Rank | Recipe Title | Cal Value (100g) | Protein (100g) | Iron (mg) | Calcium (mg) | Potassium (mg) | Nutrition Density |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | **Jamaican Punch** | 59.4551 kcal | 1.2209g | 0.41mg | 10.9mg | 84.0mg | **2.715** |
-| 2 | **Herb Sauteed Green Peppers** | 16.4338 kcal | 0.626g | 0.36mg | 4.8mg | 122.2mg | **2.277** |
-| 3 | **Spiced Buttermilk With Coriander And Ginger Recipe** | 2.5 kcal | 0.125g | 0.18mg | 10.2mg | 27.1mg | **2.267** |
-| 4 | **How to Blanch Tomatoes Recipe** | 2.5 kcal | 0.15g | 0.10mg | 12.9mg | 34.2mg | **2.238** |
-| 5 | **Fruity Sweet and Sour Sauce** | 139.7559 kcal | 3.2066g | 0.74mg | 24.1mg | 110.7mg | **2.215** |
+| 1 | **Fruity Sweet and Sour Sauce** | 139.7559 kcal | 3.2066g | 0.74mg | 24.1mg | 110.7mg | **2.215** |
+| 2 | **Baked Apples** | 35.3898 kcal | 1.5027g | 0.63mg | 17.5mg | 254.9mg | **1.275** |
+| 3 | **Air Fryer Lobster Tails with Lemon-Garlic Butter** | 51.8444 kcal | 7.7433g | 0.35mg | 43.3mg | 139.9mg | **1.179** |
+| 4 | **Chiles en Nogada (Mexican Stuffed Poblano Peppers in Walnut Sauce)** | 24.0 kcal | 0.9g | 0.70mg | 6.8mg | 155.5mg | **0.978** |
+| 5 | **Pepes Tahu Kemangi (Spiced Steamed Tofu in Banana Leaf)** | 77.1818 kcal | 5.5897g | 3.37mg | 210.2mg | 113.5mg | **0.960** |
 
 ---
 
@@ -59,6 +61,27 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 **Columns Staged:**
 `Class`, `Type`, `Group`, `Food`, `Allergy`
 
+
+
+### File: `datasets/consumption/consumption.csv`
+
+| Metric | Value |
+| :--- | :--- |
+| **Rows** | 9,519 |
+| **Columns** | 7 |
+| **Total Missing Cells** | 7 |
+| **Duplicate Rows** | 0 |
+
+**Columns Staged:**
+`No`, `Tahun`, `Kode Provinsi`, `Provinsi`, `Kelompok Bahan Pangan`, `Komoditas`, `Konsumsi_Pangan`
+
+**Numeric Statistics Summary:**
+| Column Name | Mean | Min | Max |
+| :--- | :--- | :--- | :--- |
+| No | 4760.0 | 1.0 | 9519.0 |
+| Tahun | 2021.59 | 2018.0 | 2025.0 |
+| Kode Provinsi | 48.88 | 11.0 | 96.0 |
+| Konsumsi_Pangan | 17.05 | 0.0 | 306.9 |
 
 
 ### File: `datasets/master/master_allergen_dictionary.csv`
@@ -137,9 +160,9 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 
 | Metric | Value |
 | :--- | :--- |
-| **Rows** | 16,098 |
+| **Rows** | 986 |
 | **Columns** | 43 |
-| **Total Missing Cells** | 15137 |
+| **Total Missing Cells** | 1 |
 | **Duplicate Rows** | 0 |
 
 **Columns Staged:**
@@ -148,9 +171,9 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 **Numeric Statistics Summary:**
 | Column Name | Mean | Min | Max |
 | :--- | :--- | :--- | :--- |
-| total_weight_g | 1286.66 | 25.0 | 17885.0 |
-| estimated_servings | 4.29 | 1.0 | 59.6 |
-| structured_match_rate | 0.84 | 0.0 | 1.0 |
+| total_weight_g | 1599.82 | 25.0 | 12601.8 |
+| estimated_servings | 5.34 | 1.0 | 42.0 |
+| structured_match_rate | 0.79 | 0.0 | 1.0 |
 
 
 ### File: `datasets/recipe/housing.csv`
@@ -164,6 +187,20 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 
 **Columns Staged:**
 ` 0.00632  18.00   2.310  0  0.5380  6.5750  65.20  4.0900   1  296.0  15.30 396.90   4.98  24.00`
+
+
+
+### File: `datasets/recipe/indonesian_recipes.csv`
+
+| Metric | Value |
+| :--- | :--- |
+| **Rows** | 25 |
+| **Columns** | 4 |
+| **Total Missing Cells** | 1 |
+| **Duplicate Rows** | 0 |
+
+**Columns Staged:**
+`recipe_name`, `ingredients`, `directions`, `img_src`
 
 
 
