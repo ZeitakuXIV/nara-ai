@@ -460,20 +460,52 @@ class NaraRecommender:
             density_val = r["Recipe Nutrition Density"]
             ras_val = r["ras_score"]
             
+            # Check if this is a standalone protein/side dish (lauk-pauk) lacking carbohydrate
+            # Threshold: standard serving of 300g contains less than 20g of carbohydrates
+            has_carb = rec_carb_standard >= 20.0
+            
+            carb_name = None
+            carb_cal = 0.0
+            carb_prot = 0.0
+            carb_fat = 0.0
+            carb_carbs = 0.0
+            
+            if not has_carb:
+                # Pair with a BPS-aligned regional carbohydrate staple!
+                east_provinces = ['papua', 'maluku', 'papua barat', 'papua selatan', 'papua tengah', 'papua pegunungan', 'maluku utara', 'nusa tenggara timur']
+                if prov_display.strip().lower() in east_provinces:
+                    carb_name = "Singkong Rebus (150g)"
+                    carb_cal = 160.0
+                    carb_prot = 1.5
+                    carb_fat = 0.3
+                    carb_carbs = 38.0
+                else:
+                    carb_name = "Nasi Putih (150g)"
+                    carb_cal = 195.0
+                    carb_prot = 4.0
+                    carb_fat = 0.3
+                    carb_carbs = 43.0
+            
+            # Deduct paired carb from target before scaling the side dish
+            t_cal_adj = max(100.0, t_cal - carb_cal)
+            
             # Dynamic serving portion scale multiplier calculation
-            scale_factor = t_cal / max(rec_cal_standard, 1.0)
+            scale_factor = t_cal_adj / max(rec_cal_standard, 1.0)
             scale_factor = round(scale_factor, 1)
             # Clip scale factor to reasonable boundaries (0.5x to 2.5x) to avoid absurd volumes
             scale_factor = max(0.5, min(2.5, scale_factor))
             
-            scaled_cal = round(rec_cal_standard * scale_factor, 1)
-            scaled_prot = round(rec_prot_standard * scale_factor, 1)
-            scaled_fat = round(rec_fat_standard * scale_factor, 1)
-            scaled_carb = round(rec_carb_standard * scale_factor, 1)
+            scaled_cal = round(rec_cal_standard * scale_factor + carb_cal, 1)
+            scaled_prot = round(rec_prot_standard * scale_factor + carb_prot, 1)
+            scaled_fat = round(rec_fat_standard * scale_factor + carb_fat, 1)
+            scaled_carb = round(rec_carb_standard * scale_factor + carb_carbs, 1)
             
             # Formulate explanations
             cal_diff = round(scaled_cal - t_cal, 1)
-            scale_reason = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * 300, 0):.0f}g) untuk mencukupi target kalori Anda ({cal_diff:+.1f} kkal dari target)."
+            if carb_name:
+                scale_reason = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * 300, 0):.0f}g) disandingkan dengan {carb_name} sebagai karbohidrat utama ({cal_diff:+.1f} kkal dari target)."
+            else:
+                scale_reason = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * 300, 0):.0f}g) sebagai hidangan lengkap satu piring ({cal_diff:+.1f} kkal dari target)."
             
             prot_err = abs(scaled_prot - t_prot) / max(t_prot, 1.0)
             if prot_err < 0.15:
