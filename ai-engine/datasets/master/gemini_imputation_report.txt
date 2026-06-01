@@ -1,0 +1,118 @@
+======================================================================
+   IMPUTATION REPORT  —  Rules-Based Expert Imputation
+======================================================================
+  Total rows in database  : 3,741
+  Complete rows (Western) : 2,395  (Untouched)
+  Imputed rows (Indonesian): 1,346
+
+──────────────────────────────────────────────────────────────────────
+  SAMPLE OF 5 IMPUTED ROWS
+──────────────────────────────────────────────────────────────────────
+
+  Food : babi ginjal segar
+  Macros → Cal: 110.0 kcal | P: 16.30g | F: 4.60g | C: 0.80g
+  Imputed ↓
+    Iron                : 5.5000 mg
+    Vitamin C           : 9.0000 mg
+    Calcium             : 22.3389 mg
+    Potassium           : 260.0000 mg
+    Saturated Fats      : 1.8151 g
+    Cholesterol         : 310.0000 mg
+    Vitamin B12         : 16.0000 mcg
+    Water               : 76.8000 g
+    Nutrition Density   : 4.129
+
+  Food : daging kambing
+  Macros → Cal: 154.0 kcal | P: 16.60g | F: 9.20g | C: 0.00g
+  Imputed ↓
+    Iron                : 3.8315 mg
+    Vitamin C           : 4.2039 mg
+    Calcium             : 49.3213 mg
+    Potassium           : 600.8375 mg
+    Saturated Fats      : 3.5247 g
+    Cholesterol         : 178.8848 mg
+    Vitamin B12         : 0.0436 mcg
+    Water               : 72.7000 g
+    Nutrition Density   : 0.953
+
+  Food : ikan selar kuning cue mentah
+  Macros → Cal: 138.0 kcal | P: 27.00g | F: 3.30g | C: 0.00g
+  Imputed ↓
+    Iron                : 4.5000 mg
+    Vitamin C           : 0.0000 mg
+    Calcium             : 850.0000 mg
+    Potassium           : 450.0000 mg
+    Saturated Fats      : 0.7036 g
+    Cholesterol         : 85.0000 mg
+    Vitamin B12         : 2.5000 mcg
+    Water               : 68.2000 g
+    Nutrition Density   : 2.127
+
+  Food : jamur merang segar
+  Macros → Cal: 30.0 kcal | P: 3.50g | F: 0.20g | C: 4.00g
+  Imputed ↓
+    Iron                : 1.4000 mg
+    Vitamin C           : 1.0000 mg
+    Calcium             : 12.0000 mg
+    Potassium           : 330.0000 mg
+    Saturated Fats      : 0.0361 g
+    Cholesterol         : 0.0000 mg
+    Vitamin B12         : 0.0000 mcg
+    Water               : 90.8000 g
+    Nutrition Density   : 1.625
+
+──────────────────────────────────────────────────────────────────────
+  UNCERTAIN / AMBIGUOUS FOOD TYPE FLAGS
+──────────────────────────────────────────────────────────────────────
+  The following foods have unique traditional names and were flagged
+  as uncertain for simple text keyword matching. We used their
+  macronutrient profile ratios as secondary signals to classify them:
+  - cammetutu                      → Classified as: other_vegetables          (P: 3.2g, F: 6.0g, C: 8.7g)
+  - hangop                         → Classified as: dairy                     (P: 10.0g, F: 1.0g, C: 3.5g)
+  - kotiu hinela tawang nggole     → Classified as: other_vegetables          (P: 2.2g, F: 1.5g, C: 6.0g)
+  - lilin bungkus gedi             → Classified as: leafy_greens              (P: 2.3g, F: 5.2g, C: 5.8g)
+  - olah-olah                      → Classified as: other_vegetables          (P: 2.1g, F: 6.0g, C: 7.1g)
+  - purundawa                      → Classified as: other_vegetables          (P: 1.5g, F: 0.5g, C: 3.6g)
+  - putri malu segar               → Classified as: leafy_greens              (P: 3.6g, F: 0.3g, C: 14.6g)
+  - tinira ninahu nggaluku         → Classified as: other                     (P: 1.2g, F: 1.3g, C: 4.1g)
+  - tipa-tipa                      → Classified as: grains_starches           (P: 6.2g, F: 1.2g, C: 79.8g)
+
+──────────────────────────────────────────────────────────────────────
+  POST-IMPUTATION STATS (imputed rows only)
+──────────────────────────────────────────────────────────────────────
+  Column                            Min        Mean         Max
+  -------------------------  ----------  ----------  ----------
+  Saturated Fats                 0.0000      1.1821     11.3547
+  Monounsaturated Fats           0.0000      1.4108     11.3067
+  Polyunsaturated Fats           0.0000      0.9181      6.7467
+  Sugars                         0.0000      3.4559     15.0000
+  Dietary Fiber                  0.0000      1.6943      3.8596
+  Cholesterol                    0.0000     41.6442    380.0000
+  Sodium                         0.0200      0.3472      1.5000
+  Water                          0.0000     56.3809     95.0000
+  Vitamin A                      0.0000      1.2147     18.0000
+  Vitamin B1                     0.0000      0.1748      1.2029
+  Vitamin B11                    0.0000      0.2282      1.2299
+  Vitamin B12                    0.0000      0.6328     28.0000
+  Vitamin B2                     0.0000      0.1921      1.4482
+  Vitamin B3                     0.0000      2.8401      9.0501
+  Vitamin B5                     0.0000      0.8579      3.9366
+  Vitamin B6                     0.0000      0.3059      0.9595
+  Vitamin C                      0.0000     11.8453     40.9660
+  Vitamin D                      0.0000      3.0056      9.0112
+  Vitamin E                      0.0000      0.5514      2.2207
+  Vitamin K                      0.0000      0.2148      0.5300
+  Calcium                        8.0000    122.9444    850.0000
+  Copper                         0.0000      8.5330     46.5250
+  Iron                           0.0000      2.0050      8.5000
+  Magnesium                      0.0000     31.7382     61.2417
+  Manganese                      0.0000      5.4381     26.0500
+  Phosphorus                     0.0000    176.3687    600.0000
+  Potassium                      5.0000    321.4040    600.8375
+  Selenium                       0.0000     59.6217    156.3000
+  Zinc                           0.0000      1.1459      6.8594
+  Nutrition Density              0.0030      0.9719      9.3690
+
+======================================================================
+  All safety clips, scale limits, and biological validations passed.
+======================================================================
