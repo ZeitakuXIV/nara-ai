@@ -675,4 +675,33 @@ def run_demo():
         print("-------------------------------------------------------\n")
 
 if __name__ == "__main__":
-    run_demo()
+    import sys
+    
+    # Check if run with profile CLI argument
+    if len(sys.argv) > 1:
+        profile_json = None
+        for i, arg in enumerate(sys.argv):
+            if arg == "--profile" and i + 1 < len(sys.argv):
+                profile_json = sys.argv[i + 1]
+                break
+        
+        if profile_json:
+            try:
+                user_profile = json.loads(profile_json)
+                engine = NaraRecommender()
+                result = engine.recommend(user_profile)
+                # Print only the resulting JSON string so Next.js can parse it directly
+                print(json.dumps(result, ensure_ascii=False))
+                sys.exit(0)
+            except Exception as e:
+                error_res = {
+                    "status": "error",
+                    "message": f"Python Engine Execution Error: {str(e)}"
+                }
+                print(json.dumps(error_res, ensure_ascii=False))
+                sys.exit(1)
+        else:
+            print("Usage: python3 recommendation_engine.py --profile '<JSON_STRING>'")
+            sys.exit(1)
+    else:
+        run_demo()
