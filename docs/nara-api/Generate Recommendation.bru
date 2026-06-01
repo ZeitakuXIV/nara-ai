@@ -1,0 +1,27 @@
+meta {
+  name: Generate Meal Plan Recommendation
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/recommend
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "weight_kg": 70.0,
+    "height_cm": 172.0,
+    "age_years": 24,
+    "sex": "female",
+    "activity_level": "moderately_active",
+    "goal": "weight_loss",
+    "allergies": [
+      "gluten allergy"
+    ],
+    "province": "Jawa Barat",
+    "clinical_conditions": []
+  }
+}
