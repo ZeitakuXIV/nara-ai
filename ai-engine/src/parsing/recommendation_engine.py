@@ -276,10 +276,10 @@ class NaraRecommender:
         normalized_density = recipe_density / (np.max(recipe_density) + 1e-5)
         
         final_scores = (
-            0.30 * cal_score +
-            0.25 * macro_score +
-            0.25 * normalized_density +
-            0.20 * recipe_ras
+            0.20 * cal_score +
+            0.15 * macro_score +
+            0.20 * normalized_density +
+            0.45 * recipe_ras
         )
         
         filtered_df["recommendation_score"] = final_scores
