@@ -7,6 +7,7 @@ node_modules/
 # OS files
 .DS_Store
 Thumbs.db
+.antigravitycli/
 
 # Python
 __pycache__/
@@ -17,6 +18,7 @@ env/
 venv/
 
 # Local env files
+.env
 .env*.local
 
 # Large Raw Datasets (Strictly ignored)
