@@ -156,6 +156,39 @@ def classify_recipe_category(ingredients_list, title) -> str:
         
     return 'other'
 
+def is_main_dish(title, ingredients_list) -> bool:
+    title_clean = str(title).lower().strip()
+    
+    # Exclude desserts, snacks, candies, and sweet treats
+    dessert_kws = [
+        'cookie', 'cookies', 'treat', 'treats', 'candy', 'candies', 'dessert', 'desserts', 
+        'marshmallow', 'marshmallows', 'scotcharoo', 'scotcharoos', 'krispies', 'krispy',
+        'crispy treat', 'crispy treats', 'cake', 'cakes', 'pie', 'pies', 'donut', 'donuts', 
+        'pudding', 'puddings', 'fudge', 'brownie', 'brownies', 'muffin', 'muffins', 
+        'caramel', 'chocolate', 'cupcake', 'cupcakes', 'truffle', 'tart', 'tarts', 
+        'popcorn', 'pretzel', 'pretzels', 'chex mix', 'frosting', 'icing', 'syrup',
+        'jam', 'pancake', 'pancakes', 'waffle', 'waffles', 'sweet', 'sweets', 'bars', 'bark'
+    ]
+    if any(kw in title_clean for kw in dessert_kws):
+        return False
+        
+    # Exclude side sauces, raw dressings, glazes, and seasonings
+    condiment_kws = [
+        'sauce', 'gravy', 'dressing', 'marinade', 'rub', 'dip', 'syrup', 'seasoning',
+        'salsa', 'pesto', 'glaze', 'vinaigrette', 'spread', 'paste'
+    ]
+    if any(title_clean.endswith(kw) or f" {kw}" in title_clean for kw in condiment_kws):
+        # Unless it is clearly a main meat/fish dish in sauce
+        if not any(x in title_clean for x in ['chicken', 'beef', 'meat', 'fish', 'stew', 'curry']):
+            return False
+            
+    # Exclude basic beverages
+    beverage_kws = ['drink', 'juice', 'smoothie', 'shake', 'cocktail', 'punch', 'tea', 'coffee', 'cider']
+    if any(kw in title_clean for kw in beverage_kws):
+        return False
+        
+    return True
+
 class NaraRecommender:
     def __init__(self):
         print("📂 NaraRecommender: Loading master recipe database ...")
@@ -331,6 +364,11 @@ class NaraRecommender:
         
         for idx_val, r in candidates.iterrows():
             ingredients = self.parsed_ingredients[idx_val]
+            
+            # CSP Constraint: Only recommend realistic main dishes for meal prep
+            if not is_main_dish(r['title'], ingredients):
+                continue
+                
             cat = classify_recipe_category(ingredients, r['title'])
             
             # CSP Constraint: Max 4 of the same food category in the 15-recipe pool
@@ -347,6 +385,11 @@ class NaraRecommender:
         if len(selected_recipes) < 15:
             for idx_val, r in candidates.iterrows():
                 ingredients = self.parsed_ingredients[idx_val]
+                
+                # Check main dish constraint here as well
+                if not is_main_dish(r['title'], ingredients):
+                    continue
+                    
                 cat = classify_recipe_category(ingredients, r['title'])
                 # Avoid duplicates
                 if any(x[0]["title"] == r["title"] for x in selected_recipes):
