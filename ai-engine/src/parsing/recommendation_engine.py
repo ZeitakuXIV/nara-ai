@@ -1,21 +1,61 @@
 """
 recommendation_engine.py — Dynamic Recommendation Engine POC (High-Performance).
-Calculates dynamic nutritional goals (BMR/TDEE), filters out user allergens,
-and scores 16,000+ recipes in real-time under 10 milliseconds.
+Calculates dynamic nutritional goals (BMR/TDEE), screens for clinical red-lines,
+scores 16,000+ recipes in real-time, and integrates BPS regional commodity consumption
+data with Explainable AI (XAI) justifications.
 """
 
 import os
 import json
 import time
+import collections
 import pandas as pd
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RECIPE_CSV = os.path.join(BASE_DIR, "datasets/master/master_recipe_database.csv")
 ALLERGEN_CSV = os.path.join(BASE_DIR, "datasets/master/master_allergen_dictionary.csv")
+CONSUMPTION_CSV = os.path.join(BASE_DIR, "datasets/consumption/consumption.csv")
 
 # ──────────────────────────────────────────────
-# 1. Dynamic Calorie & Macro Target Calculator
+# 1. Clinical Red-Line Safety Guardrails Definitions
+# ──────────────────────────────────────────────
+
+CLINICAL_RED_LINES = {
+    'kidney_disease': {
+        'name_id': 'Penyakit Ginjal Kronis (CKD)',
+        'name_en': 'Chronic Kidney Disease (CKD)',
+        'disclaimer_id': 'Sistem Nara AI mendeteksi riwayat Penyakit Ginjal. Untuk mencegah komplikasi (seperti penumpukan protein, kalium, dan fosfor berbahaya), Anda memerlukan diet klinis terawasi. Silakan berkonsultasi dengan Dokter Spesialis Gizi Klinik (Sp.GK) atau Dietisien terdaftar.',
+        'disclaimer_en': 'Nara AI detected a history of Kidney Disease. To prevent serious complications (such as toxic build-up of protein, potassium, and phosphorus), you require a supervised clinical diet. Please consult a registered clinical dietitian or medical specialist.'
+    },
+    'heart_failure': {
+        'name_id': 'Gagal Jantung Kongestif (CHF)',
+        'name_en': 'Congestive Heart Failure (CHF)',
+        'disclaimer_id': 'Sistem Nara AI mendeteksi riwayat Gagal Jantung. Pembatasan natrium dan cairan sangat penting untuk mencegah penumpukan cairan di paru-paru. Silakan berkonsultasi dengan Dokter Spesialis Gizi Klinik (Sp.GK) atau Dokter Spesialis Jantung.',
+        'disclaimer_en': 'Nara AI detected Congestive Heart Failure. Strict sodium and fluid restrictions are crucial to prevent pulmonary edema. Please consult a cardiologist or registered clinical dietitian.'
+    },
+    'liver_cirrhosis': {
+        'name_id': 'Sirosis Hati (Liver Cirrhosis)',
+        'name_en': 'Liver Cirrhosis',
+        'disclaimer_id': 'Sistem Nara AI mendeteksi riwayat Sirosis Hati. Pengaturan asupan protein dan natrium memerlukan pengawasan ketat untuk mencegah komplikasi ensefalopati hepatik. Silakan berkonsultasi dengan Dokter Spesialis Gizi Klinik atau Spesialis Penyakit Dalam.',
+        'disclaimer_en': 'Nara AI detected Liver Cirrhosis. Protein and sodium titration require close medical supervision to prevent complications. Please consult a medical specialist.'
+    },
+    'type1_diabetes': {
+        'name_id': 'Diabetes Tipe 1',
+        'name_en': 'Type 1 Diabetes',
+        'disclaimer_id': 'Sistem Nara AI mendeteksi Diabetes Tipe 1. Perhitungan karbohidrat presisi tinggi dan pencocokan dosis insulin aktif sangat penting untuk mencegah ketoasidosis diabetikum (KDK). Silakan berkonsultasi dengan Dokter Spesialis Endokrinologi.',
+        'disclaimer_en': 'Nara AI detected Type 1 Diabetes. Precision carbohydrate matching and active insulin titration are critical to prevent Diabetic Ketoacidosis (DKA). Please consult an endocrinologist.'
+    },
+    'severe_gout': {
+        'name_id': 'Asam Urat Akut (Severe Gout)',
+        'name_en': 'Severe Gout',
+        'disclaimer_id': 'Sistem Nara AI mendeteksi kondisi Asam Urat Akut. Konsumsi purin tinggi (seperti jeroan, daging merah tertentu, dan seafood) harus dibatasi ketat untuk mencegah serangan nyeri sendi akut. Silakan berkonsultasi dengan Dokter atau Dietisien.',
+        'disclaimer_en': 'Nara AI detected Severe Gout. High-purine items (like organ meats, red meats, and shellfish) must be strictly avoided to prevent acute painful flare-ups. Please consult a medical professional.'
+    }
+}
+
+# ──────────────────────────────────────────────
+# 2. Dynamic Calorie & Macro Target Calculator
 # ──────────────────────────────────────────────
 
 def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, sex: str, activity_level: str, goal: str) -> dict:
@@ -43,15 +83,12 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     # Calorie Target based on Goals
     if goal.lower() == 'weight_loss':
         cal_target = tdee - 500.0  # standard 500 kcal deficit
-        # Macro splits: 30% Protein, 30% Fat, 40% Carbs
         protein_pct, fat_pct, carb_pct = 0.30, 0.30, 0.40
     elif goal.lower() == 'muscle_gain':
         cal_target = tdee + 400.0  # surplus for lean mass gain
-        # Macro splits: 35% Protein, 25% Fat, 40% Carbs
         protein_pct, fat_pct, carb_pct = 0.35, 0.25, 0.40
     else:  # weight maintenance
         cal_target = tdee
-        # Standard balanced split: 20% Protein, 30% Fat, 50% Carbs
         protein_pct, fat_pct, carb_pct = 0.20, 0.30, 0.50
         
     # Translate target calories to gram targets (P: 4 kcal/g, F: 9 kcal/g, C: 4 kcal/g)
@@ -59,7 +96,6 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     fat_g = (cal_target * fat_pct) / 9.0
     carb_g = (cal_target * carb_pct) / 4.0
     
-    # Estimate targets per meal (assuming 3 meals + 1 snack, dividing by 3.5)
     return {
         "bmr": round(bmr, 1),
         "tdee": round(tdee, 1),
@@ -71,8 +107,23 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     }
 
 # ──────────────────────────────────────────────
-# 2. Dynamic Real-time Recommender Engine
+# 3. Dynamic Real-time Recommender Engine
 # ──────────────────────────────────────────────
+
+# Indonesian Commodity Keywords for Provincial Alignment Mapping
+COMMODITY_KEYWORDS = {
+    'beras': ['rice', 'beras', 'nasi'],
+    'daging unggas': ['chicken', 'turkey', 'poultry', 'ayam', 'bebek', 'unggas'],
+    'daging ruminansia': ['beef', 'meat', 'sapi', 'kambing', 'daging', 'ruminansia'],
+    'telur': ['egg', 'telur', 'telor'],
+    'ikan': ['fish', 'tuna', 'salmon', 'cod', 'mackerel', 'ikan', 'teri', 'seafood', 'shrimp', 'crab', 'squid', 'cumi', 'udang', 'kepiting', 'seafood'],
+    'kentang': ['potato', 'kentang'],
+    'singkong': ['cassava', 'singkong', 'tapioca'],
+    'ubi jalar': ['sweet potato', 'ubi'],
+    'sagu': ['sago', 'sagu'],
+    'kelapa': ['coconut', 'kelapa', 'santan'],
+    'kedelai': ['soy', 'tofu', 'tempeh', 'tahu', 'tempe', 'kedelai']
+}
 
 class NaraRecommender:
     def __init__(self):
@@ -80,6 +131,20 @@ class NaraRecommender:
         self.df = pd.read_csv(RECIPE_CSV)
         self.allergen_df = pd.read_csv(ALLERGEN_CSV)
         
+        # Load regional consumption database
+        print("📂 NaraRecommender: Loading Indonesian BPS regional consumption data ...")
+        self.consumption_df = pd.read_csv(CONSUMPTION_CSV)
+        latest_year = self.consumption_df['Tahun'].max()
+        self.latest_consumption = self.consumption_df[self.consumption_df['Tahun'] == latest_year]
+        
+        # Map consumption: self.consumption_map[province][commodity] = consumption_val
+        self.consumption_map = collections.defaultdict(dict)
+        for _, r in self.latest_consumption.iterrows():
+            prov = str(r['Provinsi']).strip().lower()
+            com = str(r['Komoditas']).strip().lower()
+            val = float(r['Konsumsi_Pangan'])
+            self.consumption_map[prov][com] = val
+            
         # Build allergen maps (ingredient ➜ set of triggered allergies)
         self.allergen_map = {}
         for _, r in self.allergen_df.iterrows():
@@ -96,12 +161,49 @@ class NaraRecommender:
             except:
                 self.parsed_ingredients.append([])
                 
-        print(f"✅ NaraRecommender: Loaded {len(self.df):,} recipes and {len(self.allergen_map):,} allergen ingredient mappings.")
+        # Pre-calculate recipe commodity profiles to speed up regional alignment queries
+        print("⚡ Pre-building recipe regional commodity indexes ...")
+        self.recipe_commodities = []
+        for ingredients in self.parsed_ingredients:
+            comp_map = {com_name: 0.0 for com_name in COMMODITY_KEYWORDS.keys()}
+            for ing in ingredients:
+                item = ing.get('item', '').lower().strip()
+                grams = float(ing.get('grams', 0.0))
+                for com_name, keywords in COMMODITY_KEYWORDS.items():
+                    if any(kw in item for kw in keywords):
+                        comp_map[com_name] += grams
+            self.recipe_commodities.append(comp_map)
+            
+        print(f"✅ NaraRecommender: Loaded {len(self.df):,} recipes, {len(self.allergen_map):,} allergens, and {len(self.consumption_map):,} provinces.")
 
-    def recommend(self, user_profile: dict, limit: int = 5) -> list:
+    def recommend(self, user_profile: dict, limit: int = 5) -> dict:
         start_time = time.perf_counter()
         
-        # 1. Calculate calorie & macro targets
+        # ── 1. Ethics & Safety Cutoff Stage ──
+        user_conditions = [c.strip().lower() for c in user_profile.get("clinical_conditions", [])]
+        matched_conditions = [c for c in user_conditions if c in CLINICAL_RED_LINES]
+        
+        if matched_conditions:
+            cond = matched_conditions[0] # trigger for primary condition
+            elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+            return {
+                "status": "safety_cutoff_triggered",
+                "elapsed_ms": round(elapsed_ms, 2),
+                "clinical_condition_triggered": CLINICAL_RED_LINES[cond]["name_id"],
+                "medical_disclaimer_id": CLINICAL_RED_LINES[cond]["disclaimer_id"],
+                "medical_disclaimer_en": CLINICAL_RED_LINES[cond]["disclaimer_en"],
+                "exportable_profile": {
+                    "weight_kg": user_profile["weight_kg"],
+                    "height_cm": user_profile["height_cm"],
+                    "age_years": user_profile["age_years"],
+                    "sex": user_profile["sex"],
+                    "activity_level": user_profile["activity_level"],
+                    "goal": user_profile["goal"],
+                    "allergies": user_profile.get("allergies", [])
+                }
+            }
+        
+        # ── 2. Calculate daily & per-meal nutritional targets ──
         targets = calculate_user_targets(
             weight_kg=user_profile["weight_kg"],
             height_cm=user_profile["height_cm"],
@@ -113,7 +215,7 @@ class NaraRecommender:
         
         user_allergies = {a.lower().strip() for a in user_profile.get("allergies", [])}
         
-        # 2. Fast Allergen Filter Stage (Pre-parsed List Indexing)
+        # ── 3. Fast Allergen Filter Stage (Pre-parsed List Indexing) ──
         valid_indices = []
         for idx, ingredients in enumerate(self.parsed_ingredients):
             triggers_allergy = False
@@ -128,21 +230,40 @@ class NaraRecommender:
                 valid_indices.append(idx)
                 
         filtered_df = self.df.iloc[valid_indices].copy()
+        filtered_commodities = [self.recipe_commodities[i] for i in valid_indices]
         n_filtered = len(self.df) - len(filtered_df)
         
-        # 3. Dynamic Nutrition Scoring Stage (NumPy Matrix Operations)
+        # ── 4. Provincial Food Consumption Scoring (Regional Alignment) ──
+        province_name = user_profile.get("province", "").strip().lower()
+        prov_consumption = self.consumption_map.get(province_name, self.consumption_map.get("nasional", {}))
+        if not prov_consumption and self.consumption_map:
+            # Fallback to national or first province in map
+            prov_consumption = next(iter(self.consumption_map.values()))
+            
+        recipe_ras_raw = []
+        for recipe_comp in filtered_commodities:
+            # Sum weight-scaled provincial consumption rates for matching commodities
+            raw_ras = sum(recipe_comp[com] * prov_consumption.get(com, 0.0) for com in COMMODITY_KEYWORDS)
+            recipe_ras_raw.append(raw_ras)
+            
+        recipe_ras_raw = np.array(recipe_ras_raw)
+        max_ras = np.max(recipe_ras_raw) if len(recipe_ras_raw) > 0 else 1.0
+        recipe_ras = recipe_ras_raw / (max_ras + 1e-5) # normalized RAS between 0 and 1
+        
+        # ── 5. Dynamic Nutrition Scoring Stage (NumPy Matrix Operations) ──
         t_cal = targets["caloric_target_meal"]
         t_prot = targets["protein_target_meal"]
         t_fat = targets["fat_target_meal"]
         t_carb = targets["carbohydrates_target_meal"]
         
+        # We assume 3 main meals, scaling recipe nutrition per 100g to average meal sizes
         recipe_cal = filtered_df["Recipe Caloric Value"].values * 3.0
         recipe_prot = filtered_df["Recipe Protein"].values * 3.0
         recipe_fat = filtered_df["Recipe Fat"].values * 3.0
         recipe_carb = filtered_df["Recipe Carbohydrates"].values * 3.0
         recipe_density = filtered_df["Recipe Nutrition Density"].values
         
-        # A. Calorie proximity score
+        # A. Calorie proximity score (Gaussian decay around target)
         cal_score = np.exp(- np.square((recipe_cal - t_cal) / max(t_cal, 1.0)))
         
         # B. Macro balance score
@@ -151,36 +272,92 @@ class NaraRecommender:
         carb_diff = np.abs(recipe_carb - t_carb) / max(t_carb, 1.0)
         macro_score = 1.0 / (1.0 + prot_diff + fat_diff + carb_diff)
         
-        # C. Combined Expert Score
-        final_scores = 0.40 * cal_score + 0.30 * macro_score + 0.30 * (recipe_density / np.max(recipe_density + 1e-5))
+        # C. Combined Expert Scoring (Incorporating Provincial RAS)
+        normalized_density = recipe_density / (np.max(recipe_density) + 1e-5)
+        
+        final_scores = (
+            0.30 * cal_score +
+            0.25 * macro_score +
+            0.25 * normalized_density +
+            0.20 * recipe_ras
+        )
         
         filtered_df["recommendation_score"] = final_scores
+        filtered_df["ras_score"] = recipe_ras
         
         # Sort and take top N
         recommendations = filtered_df.sort_values(by="recommendation_score", ascending=False).head(limit)
         
-        # Format results
+        # ── 6. Explainable AI (XAI) Generation Stage ──
         output = []
+        prov_display = user_profile.get("province", "Nasional")
+        
         for i, (_, r) in enumerate(recommendations.iterrows()):
+            rec_cal = round(r["Recipe Caloric Value"] * 3.0, 1)
+            rec_prot = round(r["Recipe Protein"] * 3.0, 1)
+            rec_fat = round(r["Recipe Fat"] * 3.0, 1)
+            rec_carb = round(r["Recipe Carbohydrates"] * 3.0, 1)
+            density_val = r["Recipe Nutrition Density"]
+            ras_val = r["ras_score"]
+            
+            # Formulate explanations
+            cal_diff = round(rec_cal - t_cal, 1)
+            if abs(cal_diff) <= 25.0:
+                cal_reason = f"Sangat presisi dengan target kalori makan Anda ({cal_diff:+.1f} kkal dari target)."
+            else:
+                cal_reason = f"Mencukupi kalori makan Anda dengan selisih gizi terkontrol ({cal_diff:+.1f} kkal)."
+                
+            prot_err = abs(rec_prot - t_prot) / max(t_prot, 1.0)
+            if prot_err < 0.15:
+                macro_reason = "Memiliki proporsi Protein berkualitas tinggi yang sangat ideal untuk pembentukan otot/recovery."
+            elif rec_prot > t_prot:
+                macro_reason = f"Sangat kaya akan Protein ({rec_prot}g), melebihi target protein makan Anda untuk mendukung metabolisme."
+            else:
+                macro_reason = "Menyediakan kombinasi makronutrisi karbohidrat dan lemak yang seimbang."
+                
+            if density_val > 1.5:
+                density_reason = f"Kepadatan gizi mikro sangat tinggi ({density_val:.2f}), kaya akan Zat Besi, Kalsium, & Vitamin penting."
+            else:
+                density_reason = f"Menyediakan gizi mikro harian yang seimbang ({density_val:.2f})."
+                
+            allergen_reason = f"Diverifikasi 100% aman dan bebas dari alergen Anda: {', '.join(user_allergies) if user_allergies else 'none'}."
+            
+            if ras_val > 0.6:
+                regional_reason = f"Sangat selaras dengan kebiasaan konsumsi bahan pangan di {prov_display} (bahan pangan lokal melimpah)."
+            elif ras_val > 0.2:
+                regional_reason = f"Menggunakan bahan makanan yang lazim dikonsumsi dan mudah dibeli di {prov_display}."
+            else:
+                regional_reason = "Menggunakan bahan pangan pokok standar nasional."
+                
             output.append({
                 "rank": i + 1,
                 "title": r["title"],
                 "score": round(r["recommendation_score"] * 100, 1),
-                "calories_per_serving": round(r["Recipe Caloric Value"] * 3.0, 1),
-                "protein_per_serving": round(r["Recipe Protein"] * 3.0, 1),
-                "fat_per_serving": round(r["Recipe Fat"] * 3.0, 1),
-                "carbs_per_serving": round(r["Recipe Carbohydrates"] * 3.0, 1),
-                "density": r["Recipe Nutrition Density"],
-                "source": r["source"]
+                "calories_per_serving": rec_cal,
+                "protein_per_serving": rec_prot,
+                "fat_per_serving": rec_fat,
+                "carbs_per_serving": rec_carb,
+                "density": density_val,
+                "regional_alignment_score": round(ras_val * 100, 1),
+                "source": r["source"],
+                "explanations": [
+                    cal_reason,
+                    macro_reason,
+                    density_reason,
+                    allergen_reason,
+                    regional_reason
+                ]
             })
             
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
         
         return {
+            "status": "success",
             "elapsed_ms": round(elapsed_ms, 2),
             "targets": targets,
             "recipes_filtered_out_allergens": n_filtered,
             "recipes_scored_realtime": len(filtered_df),
+            "province_aligned": prov_display,
             "recommendations": output
         }
 
@@ -189,10 +366,10 @@ class NaraRecommender:
 # ──────────────────────────────────────────────
 
 def run_demo():
-    print("🚀 NARA AI-ENGINE: Starting Dynamic Recommendation Engine Demo ...\n")
+    print("🚀 NARA AI-ENGINE: Starting Dynamic Recommendation Engine & Ethical Gatekeeper Demo ...\n")
     engine = NaraRecommender()
     
-    # ── User Profile 1: Weight Loss + Gluten Allergy ──
+    # ── User Profile 1: Weight Loss + Gluten Allergy + Jawa Barat ──
     user1 = {
         "weight_kg": 70.0,
         "height_cm": 172.0,
@@ -200,47 +377,86 @@ def run_demo():
         "sex": "female",
         "activity_level": "moderately_active",
         "goal": "weight_loss",
-        "allergies": ["gluten allergy"]
+        "allergies": ["gluten allergy"],
+        "province": "Jawa Barat",
+        "clinical_conditions": []
     }
     
     print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 1: Weight Loss (Active) + Gluten Allergy")
+    print("👤 USER PROFILE 1: Weight Loss (Active) + Gluten Allergy + Jawa Barat")
     print("-------------------------------------------------------")
-    res1 = engine.recommend(user1, limit=3)
-    print(f"📊 Calculated targets per meal: {res1['targets']['caloric_target_meal']} kcal | "
-          f"P: {res1['targets']['protein_target_meal']}g | F: {res1['targets']['fat_target_meal']}g | C: {res1['targets']['carbohydrates_target_meal']}g")
-    print(f"🛡️  Allergen guard filtered out: {res1['recipes_filtered_out_allergens']} recipes containing gluten.")
-    print(f"⚡ Real-time scoring speed   : {res1['elapsed_ms']} milliseconds! (Scored {res1['recipes_scored_realtime']} recipes)")
-    print("\n🏆 Top 3 Recommended Meals:")
-    for rec in res1["recommendations"]:
-        print(f"  {rec['rank']}. {rec['title']} (Score: {rec['score']}%)\n"
-              f"     Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g\n"
-              f"     Source  : {rec['source']} | Nutrition Density: {rec['density']}\n")
-              
-    # ── User Profile 2: Muscle Gain + Nut Allergy ──
+    res1 = engine.recommend(user1, limit=2)
+    if res1["status"] == "success":
+        print(f"📊 Calculated targets per meal: {res1['targets']['caloric_target_meal']} kcal | "
+              f"P: {res1['targets']['protein_target_meal']}g | F: {res1['targets']['fat_target_meal']}g | C: {res1['targets']['carbohydrates_target_meal']}g")
+        print(f"🛡️  Allergen guard filtered out: {res1['recipes_filtered_out_allergens']} recipes containing gluten.")
+        print(f"🌏 Aligned Province          : {res1['province_aligned']}")
+        print(f"⚡ Real-time scoring speed   : {res1['elapsed_ms']} milliseconds!")
+        print("\n🏆 Top 2 Aligned Recommendations with Explainable AI:")
+        for rec in res1["recommendations"]:
+            print(f"  {rec['rank']}. {rec['title']} (Score: {rec['score']}% | Regional Alignment: {rec['regional_alignment_score']}%)")
+            print(f"     Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
+            print(f"     🔍 AI Rationale:")
+            for exp in rec["explanations"]:
+                print(f"       👉 {exp}")
+            print()
+
+    # ── User Profile 2: Papua comparison (Same parameters but different province) ──
     user2 = {
-        "weight_kg": 82.0,
-        "height_cm": 180.0,
-        "age_years": 28,
-        "sex": "male",
-        "activity_level": "very_active",
-        "goal": "muscle_gain",
-        "allergies": ["nut allergy"]
+        "weight_kg": 70.0,
+        "height_cm": 172.0,
+        "age_years": 24,
+        "sex": "female",
+        "activity_level": "moderately_active",
+        "goal": "weight_loss",
+        "allergies": ["gluten allergy"],
+        "province": "Papua",
+        "clinical_conditions": []
     }
     
     print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 2: Muscle Gain (Athletic) + Nut Allergy")
+    print("👤 USER PROFILE 2: Weight Loss (Active) + Gluten Allergy + Papua (Comparison)")
     print("-------------------------------------------------------")
-    res2 = engine.recommend(user2, limit=3)
-    print(f"📊 Calculated targets per meal: {res2['targets']['caloric_target_meal']} kcal | "
-          f"P: {res2['targets']['protein_target_meal']}g | F: {res2['targets']['fat_target_meal']}g | C: {res2['targets']['carbohydrates_target_meal']}g")
-    print(f"🛡️  Allergen guard filtered out: {res2['recipes_filtered_out_allergens']} recipes containing nuts.")
-    print(f"⚡ Real-time scoring speed   : {res2['elapsed_ms']} milliseconds! (Scored {res2['recipes_scored_realtime']} recipes)")
-    print("\n🏆 Top 3 Recommended Meals:")
-    for rec in res2["recommendations"]:
-        print(f"  {rec['rank']}. {rec['title']} (Score: {rec['score']}%)\n"
-              f"     Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g\n"
-              f"     Source  : {rec['source']} | Nutrition Density: {rec['density']}\n")
+    res2 = engine.recommend(user2, limit=2)
+    if res2["status"] == "success":
+        print(f"🌏 Aligned Province          : {res2['province_aligned']}")
+        print(f"⚡ Real-time scoring speed   : {res2['elapsed_ms']} milliseconds!")
+        print("\n🏆 Top 2 Aligned Recommendations with Explainable AI:")
+        for rec in res2["recommendations"]:
+            print(f"  {rec['rank']}. {rec['title']} (Score: {rec['score']}% | Regional Alignment: {rec['regional_alignment_score']}%)")
+            print(f"     Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
+            print(f"     🔍 AI Rationale:")
+            for exp in rec["explanations"]:
+                print(f"       👉 {exp}")
+            print()
+
+    # ── User Profile 3: Safety Cutoff triggered (Kidney Disease) ──
+    user3 = {
+        "weight_kg": 65.0,
+        "height_cm": 165.0,
+        "age_years": 45,
+        "sex": "male",
+        "activity_level": "sedentary",
+        "goal": "maintenance",
+        "allergies": [],
+        "province": "Jawa Tengah",
+        "clinical_conditions": ["kidney_disease"]
+    }
+    
+    print("\n-------------------------------------------------------")
+    print("👤 USER PROFILE 3: Maintenance + Kidney Disease (Safety Trigger)")
+    print("-------------------------------------------------------")
+    res3 = engine.recommend(user3)
+    if res3["status"] == "safety_cutoff_triggered":
+        print(f"⚠️  [SAFETY CUTOFF TRIGGERED] Condition: {res3['clinical_condition_triggered']}")
+        print(f"🛑 Medical Disclaimer ID:")
+        print(f"   \"{res3['medical_disclaimer_id']}\"")
+        print(f"🛑 Medical Disclaimer EN:")
+        print(f"   \"{res3['medical_disclaimer_en']}\"")
+        print(f"📁 Exportable Patient Profile staged for clinical consultation:")
+        print(f"   {json.dumps(res3['exportable_profile'], indent=5)}")
+        print(f"⚡ Safety evaluation speed  : {res3['elapsed_ms']} milliseconds!")
+        print("-------------------------------------------------------\n")
 
 if __name__ == "__main__":
     run_demo()
