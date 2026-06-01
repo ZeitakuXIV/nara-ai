@@ -11,8 +11,9 @@ This document contains the automated data quality checks, database row/column me
 | **master_allergen_dictionary.csv** | 10,322 | 2 | 0 | ✅ Clean |
 | **master_nutrition_database.csv** | 3,741 | 36 | 0 | ✅ Clean |
 | **master_nutrition_database_imputed.csv** | 3,741 | 36 | 0 | ✅ Clean |
-| **master_recipe_database.csv** | 986 | 43 | 0 | ⚠️  Incomplete |
+| **master_recipe_database.csv** | 13,453 | 43 | 0 | ⚠️  Incomplete |
 | **housing.csv** | 505 | 1 | 0 | ✅ Clean |
+| **Indonesian_Food_Recipes.csv** | 14,945 | 10 | 0 | ⚠️  Incomplete |
 | **indonesian_recipes.csv** | 25 | 4 | 0 | ⚠️  Incomplete |
 | **nutrition.csv** | 1,346 | 7 | 0 | ✅ Clean |
 | **recipes.csv** | 1,090 | 15 | 0 | ⚠️  Incomplete |
@@ -27,23 +28,23 @@ These statistics are compiled by our **Recipe Nutrition Compiler**, which matche
 ### Average Recipe Nutrient Metrics (per 100g mixture)
 | Metric / Nutrient | Compiled Average Value |
 | :--- | :--- |
-| **Ingredient Match Rate** | **78.69%** (Fuzzy/Exact successfully linked) |
-| **Calories (per 100g)** | 147.49 kcal |
-| **Protein (per 100g)** | 5.81 g |
-| **Fat (per 100g)** | 6.07 g |
-| **Carbohydrates (per 100g)** | 17.9 g |
-| **Dietary Fiber (per 100g)** | 1.69 g |
+| **Ingredient Match Rate** | **74.64%** (Fuzzy/Exact successfully linked) |
+| **Calories (per 100g)** | 179.33 kcal |
+| **Protein (per 100g)** | 8.76 g |
+| **Fat (per 100g)** | 8.91 g |
+| **Carbohydrates (per 100g)** | 16.73 g |
+| **Dietary Fiber (per 100g)** | 1.61 g |
 
 ### 🏆 Top 5 Most Nutrient-Dense Recipes Showcase
 These recipes are sorted by their **Recipe Nutrition Density score** (beneficial nutrients per calorie):
 
 | Rank | Recipe Title | Cal Value (100g) | Protein (100g) | Iron (mg) | Calcium (mg) | Potassium (mg) | Nutrition Density |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | **Fruity Sweet and Sour Sauce** | 139.7559 kcal | 3.2066g | 0.74mg | 24.1mg | 110.7mg | **2.215** |
-| 2 | **Baked Apples** | 35.3898 kcal | 1.5027g | 0.63mg | 17.5mg | 254.9mg | **1.275** |
-| 3 | **Air Fryer Lobster Tails with Lemon-Garlic Butter** | 51.8444 kcal | 7.7433g | 0.35mg | 43.3mg | 139.9mg | **1.179** |
-| 4 | **Chiles en Nogada (Mexican Stuffed Poblano Peppers in Walnut Sauce)** | 24.0 kcal | 0.9g | 0.70mg | 6.8mg | 155.5mg | **0.978** |
-| 5 | **Pepes Tahu Kemangi (Spiced Steamed Tofu in Banana Leaf)** | 77.1818 kcal | 5.5897g | 3.37mg | 210.2mg | 113.5mg | **0.960** |
+| 1 | **Oseng koyor sapi sederhana** | 132.8299 kcal | 18.161g | 7.80mg | 23.8mg | 314.6mg | **4.965** |
+| 2 | **Tahu Kukus Sapi Giling ala Mama Valen** | 140.5743 kcal | 18.7611g | 7.90mg | 32.7mg | 315.8mg | **4.709** |
+| 3 | **Gulai Kikil n Tahu** | 150.1049 kcal | 18.3691g | 7.66mg | 32.6mg | 315.4mg | **4.290** |
+| 4 | **Slowcook Beef Bone Broth (kaldu sumsum sapi)** | 97.3247 kcal | 11.7543g | 4.95mg | 25.1mg | 255.1mg | **4.192** |
+| 5 | **Iga sapi cabai hijau + andaliman** | 83.5097 kcal | 9.3639g | 4.25mg | 28.3mg | 291.3mg | **4.013** |
 
 ---
 
@@ -160,9 +161,9 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 
 | Metric | Value |
 | :--- | :--- |
-| **Rows** | 986 |
+| **Rows** | 13,453 |
 | **Columns** | 43 |
-| **Total Missing Cells** | 1 |
+| **Total Missing Cells** | 12468 |
 | **Duplicate Rows** | 0 |
 
 **Columns Staged:**
@@ -171,9 +172,9 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 **Numeric Statistics Summary:**
 | Column Name | Mean | Min | Max |
 | :--- | :--- | :--- | :--- |
-| total_weight_g | 1599.82 | 25.0 | 12601.8 |
-| estimated_servings | 5.34 | 1.0 | 42.0 |
-| structured_match_rate | 0.79 | 0.0 | 1.0 |
+| total_weight_g | 3572.16 | 25.0 | 1304642.5 |
+| estimated_servings | 11.91 | 1.0 | 4348.8 |
+| structured_match_rate | 0.75 | 0.0 | 1.0 |
 
 
 ### File: `datasets/recipe/housing.csv`
@@ -188,6 +189,26 @@ These recipes are sorted by their **Recipe Nutrition Density score** (beneficial
 **Columns Staged:**
 ` 0.00632  18.00   2.310  0  0.5380  6.5750  65.20  4.0900   1  296.0  15.30 396.90   4.98  24.00`
 
+
+
+### File: `datasets/recipe/Indonesian_Food_Recipes.csv`
+
+| Metric | Value |
+| :--- | :--- |
+| **Rows** | 14,945 |
+| **Columns** | 10 |
+| **Total Missing Cells** | 20 |
+| **Duplicate Rows** | 0 |
+
+**Columns Staged:**
+`Title`, `Ingredients`, `Steps`, `Loves`, `URL`, `Category`, `Title Cleaned`, `Total Ingredients`, `Ingredients Cleaned`, `Total Steps`
+
+**Numeric Statistics Summary:**
+| Column Name | Mean | Min | Max |
+| :--- | :--- | :--- | :--- |
+| Loves | 11.86 | 0.0 | 939.0 |
+| Total Ingredients | 12.32 | 1.0 | 77.0 |
+| Total Steps | 5.39 | 1.0 | 26.0 |
 
 
 ### File: `datasets/recipe/indonesian_recipes.csv`

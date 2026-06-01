@@ -62,6 +62,27 @@ def build_master_recipe():
     else:
         print(f"⚠️ {indo_recipes_path} is missing.")
 
+    # 2.5. Processing datasets/recipe/Indonesian_Food_Recipes.csv (Cookpad)
+    cookpad_recipes_path = 'datasets/recipe/Indonesian_Food_Recipes.csv'
+    if os.path.exists(cookpad_recipes_path):
+        print(f"📦 Processing {cookpad_recipes_path}...")
+        df_cookpad = pd.read_csv(cookpad_recipes_path)
+        
+        # Convert '--' to ', ' and strip trailing separators
+        df_cookpad['Ingredients_clean'] = df_cookpad['Ingredients'].astype(str).str.replace('--', ', ', regex=False)
+        df_cookpad['Ingredients_clean'] = df_cookpad['Ingredients_clean'].str.strip(', ')
+        
+        df_cookpad_mapped = pd.DataFrame({
+            'title': df_cookpad['Title'],
+            'ingredients': df_cookpad['Ingredients_clean'],
+            'instructions': df_cookpad['Steps'],
+            'source': 'indonesian_local',
+            'image_url': None
+        })
+        all_recipes.append(df_cookpad_mapped)
+    else:
+        print(f"⚠️ {cookpad_recipes_path} is missing.")
+
     # 3. Processing datasets/recipe2/food_recipes.csv
     recipe2_path = 'datasets/recipe2/food_recipes.csv'
     if os.path.exists(recipe2_path):

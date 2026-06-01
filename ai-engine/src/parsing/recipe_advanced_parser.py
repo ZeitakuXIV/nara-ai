@@ -31,7 +31,30 @@ def get_unit_map():
         'clove': 5,
         'cloves': 5,
         'inch': 10,
-        'inches': 10
+        'inches': 10,
+        
+        # Indonesian Bilingual Mappings
+        'sdm': 15,
+        'sdt': 5,
+        'siung': 5,
+        'butir': 100,
+        'buah': 100,
+        'biji': 100,
+        'ekor': 100,
+        'batang': 100,
+        'lembar': 100,
+        'ikat': 100,
+        'ruas': 50,
+        'jari': 50,
+        'bungkus': 150,
+        'gelas': 240,
+        'mangkok': 400,
+        'liter': 1000,
+        'l': 1000,
+        'ml': 1,
+        'gr': 1,
+        'sendok makan': 15,
+        'sendok teh': 5
     }
 
 def parse_ingredient_line(line_orig):
@@ -158,7 +181,7 @@ def process_master_recipe():
                 lines = ast.literal_eval(raw_ingredients)
             except:
                 lines = [raw_ingredients]
-        elif source == 'archanaskitchen':
+        elif source in ['archanaskitchen', 'indonesian_local']:
              lines = raw_ingredients.split(', ')
         else:
              # allrecipes uses commas, but they can be inside parenthesis.
