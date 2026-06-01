@@ -1,0 +1,96 @@
+
+======================================================================
+  IMPUTATION REPORT  —  KNN Micronutrient Imputation
+======================================================================
+  Total rows  : 3,741
+  Complete    : 2,395  (KNN training set)
+  Imputed     : 1,346
+
+──────────────────────────────────────────────────────────────────────
+  SAMPLE OF 5 IMPUTED ROWS
+──────────────────────────────────────────────────────────────────────
+
+  Food : ubi jalar goreng
+  Macros → Cal: 160.0 kcal | P: 3.70g | F: 1.30g | C: 55.30g
+  Imputed ↓
+    Protein             : 3.7000
+    Vitamin C           : 17.9829
+    Iron                : 1.2834
+    Calcium             : 16.4087
+    Potassium           : 569.3084
+
+  Food : daging kambing
+  Macros → Cal: 154.0 kcal | P: 16.60g | F: 9.20g | C: 0.00g
+  Imputed ↓
+    Protein             : 16.6000
+    Vitamin C           : 0.2134
+    Iron                : 0.9493
+    Calcium             : 47.5109
+    Potassium           : 129.5922
+
+  Food : babi ginjal segar
+  Macros → Cal: 110.0 kcal | P: 16.30g | F: 4.60g | C: 0.80g
+  Imputed ↓
+    Protein             : 16.3000
+    Vitamin C           : 0.7127
+    Iron                : 0.9389
+    Calcium             : 20.5316
+    Potassium           : 234.8641
+
+  Food : jamur merang segar
+  Macros → Cal: 30.0 kcal | P: 3.50g | F: 0.20g | C: 4.00g
+  Imputed ↓
+    Protein             : 3.5000
+    Vitamin C           : 26.2081
+    Iron                : 0.6777
+    Calcium             : 62.1205
+    Potassium           : 157.2237
+
+  Food : ikan selar kuning cue mentah
+  Macros → Cal: 138.0 kcal | P: 27.00g | F: 3.30g | C: 0.00g
+  Imputed ↓
+    Protein             : 27.0000
+    Vitamin C           : 2.2089
+    Iron                : 2.2874
+    Calcium             : 101.3805
+    Potassium           : 460.7457
+
+──────────────────────────────────────────────────────────────────────
+  POST-IMPUTATION STATS (imputed rows only)
+──────────────────────────────────────────────────────────────────────
+  Column                            Min        Mean         Max
+  -------------------------  ----------  ----------  ----------
+  Saturated Fats                 0.0000      2.1755     32.5619
+  Monounsaturated Fats           0.0000      2.6785     46.4960
+  Polyunsaturated Fats           0.0000      1.6770     26.1278
+  Sugars                         0.0000      6.7275     55.5600
+  Dietary Fiber                  0.0000      2.5898     25.6795
+  Cholesterol                    0.0000     34.9765    926.3820
+  Sodium                         0.0000      0.3070      2.1000
+  Water                          0.2336     93.2364    333.7764
+  Vitamin A                      0.0000      0.0682      1.9120
+  Vitamin B1                     0.0000      0.2029      1.9000
+  Vitamin B11                    0.0000      0.0842      0.8000
+  Vitamin B12                    0.0000      0.0311      0.2000
+  Vitamin B2                     0.0000      0.1675      2.2000
+  Vitamin B3                     0.0000      2.3157     30.6864
+  Vitamin B5                     0.0000      0.7843      8.1250
+  Vitamin B6                     0.0000      0.2763      2.9686
+  Vitamin C                      0.0000      8.9054    115.0060
+  Vitamin D                      0.0000      3.8752     64.0600
+  Vitamin E                      0.0000      0.4877      7.0060
+  Vitamin K                      0.0000      0.1608      2.4060
+  Calcium                        0.0000     68.8259    679.5097
+  Copper                         0.0000     10.6827    148.9440
+  Iron                           0.0000      1.8917     18.0600
+  Magnesium                      0.0000     38.6988    364.9076
+  Manganese                      0.0000      7.2446     97.1080
+  Phosphorus                     0.0000    139.2575    921.3572
+  Potassium                      0.0000    329.3061   2650.4960
+  Selenium                       0.0000     68.6345    929.1500
+  Zinc                           0.0000      1.3156     18.0060
+  Nutrition Density              0.0060      0.7054      7.8710
+
+======================================================================
+  All checks passed. Dataset saved.
+======================================================================
