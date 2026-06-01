@@ -167,7 +167,9 @@ def is_main_dish(title, ingredients_list) -> bool:
         'pudding', 'puddings', 'fudge', 'brownie', 'brownies', 'muffin', 'muffins', 
         'caramel', 'chocolate', 'cupcake', 'cupcakes', 'truffle', 'tart', 'tarts', 
         'popcorn', 'pretzel', 'pretzels', 'chex mix', 'frosting', 'icing', 'syrup',
-        'jam', 'pancake', 'pancakes', 'waffle', 'waffles', 'sweet', 'sweets', 'bars', 'bark'
+        'jam', 'pancake', 'pancakes', 'waffle', 'waffles', 'sweet', 'sweets', 'bars', 'bark',
+        'cut-out', 'cut-outs', 'cutout', 'cutouts', 'biscuit', 'biscuits', 'pastry', 'pastries',
+        'scone', 'scones', 'shortbread', 'gingerbread', 'snickerdoodle'
     ]
     if any(kw in title_clean for kw in dessert_kws):
         return False
