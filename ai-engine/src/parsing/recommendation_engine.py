@@ -2,7 +2,7 @@
 recommendation_engine.py — Dynamic Recommendation Engine POC (High-Performance).
 Calculates dynamic nutritional goals (BMR/TDEE), screens for clinical red-lines,
 scores 16,000+ recipes in real-time, and integrates BPS regional commodity consumption
-data with Explainable AI (XAI) justifications.
+data with Explainable AI (XAI) justifications and a CSP 7-Day Diverse Meal Planner.
 """
 
 import os
@@ -107,7 +107,7 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     }
 
 # ──────────────────────────────────────────────
-# 3. Dynamic Real-time Recommender Engine
+# 3. Dynamic Real-time Recommender Engine with CSP Portions & Diversity Planner
 # ──────────────────────────────────────────────
 
 # Indonesian Commodity Keywords for Provincial Alignment Mapping
@@ -124,6 +124,37 @@ COMMODITY_KEYWORDS = {
     'kelapa': ['coconut', 'kelapa', 'santan'],
     'kedelai': ['soy', 'tofu', 'tempeh', 'tahu', 'tempe', 'kedelai']
 }
+
+def classify_recipe_category(ingredients_list, title) -> str:
+    """Classifies a recipe into a primary BPS-aligned food category for CSP diversity check."""
+    text = (str(title) + " " + " ".join([str(ing.get('item', '')) for ing in ingredients_list])).lower()
+    
+    # Check fish & seafood
+    fish_kws = ['fish', 'tuna', 'salmon', 'cod', 'mackerel', 'shrimp', 'prawn', 'crab', 'lobster', 'squid', 'cumi', 'udang', 'kepiting', 'ikan', 'seafood', 'clam', 'oyster']
+    if any(kw in text for kw in fish_kws):
+        return 'fish_seafood'
+        
+    # Check poultry
+    poultry_kws = ['chicken', 'turkey', 'duck', 'ayam', 'bebek', 'puyuh']
+    if any(kw in text for kw in poultry_kws):
+        return 'poultry'
+        
+    # Check red meat
+    red_meat_kws = ['beef', 'pork', 'lamb', 'mutton', 'sapi', 'kambing', 'babi', 'steak', 'daging', 'meatball', 'bakso', 'sosis', 'sausage']
+    if any(kw in text for kw in red_meat_kws):
+        return 'red_meat'
+        
+    # Check plant-based protein
+    plant_kws = ['tofu', 'tempeh', 'soy', 'bean', 'pea', 'lentil', 'peanut', 'cashew', 'tahu', 'tempe', 'kacang', 'mushroom', 'jamur']
+    if any(kw in text for kw in plant_kws):
+        return 'plant_based'
+        
+    # Check starch
+    starch_kws = ['rice', 'noodle', 'potato', 'pasta', 'bread', 'flour', 'sagu', 'singkong', 'ubi', 'kentang', 'nasi', 'gandum', 'mie']
+    if any(kw in text for kw in starch_kws):
+        return 'starch'
+        
+    return 'other'
 
 class NaraRecommender:
     def __init__(self):
@@ -176,7 +207,12 @@ class NaraRecommender:
             
         print(f"✅ NaraRecommender: Loaded {len(self.df):,} recipes, {len(self.allergen_map):,} allergens, and {len(self.consumption_map):,} provinces.")
 
-    def recommend(self, user_profile: dict, limit: int = 5) -> dict:
+    def recommend(self, user_profile: dict) -> dict:
+        """
+        Generates a 7-day diverse meal plan (7 primary + 8 swappable alternatives = 15 total)
+        using a greedy backtracking-based Constraint Satisfaction Problem (CSP) solver, 
+        incorporating BPS regional aligned weights, medical safety cutoffs, and Explainable AI (XAI).
+        """
         start_time = time.perf_counter()
         
         # ── 1. Ethics & Safety Cutoff Stage ──
@@ -272,7 +308,7 @@ class NaraRecommender:
         carb_diff = np.abs(recipe_carb - t_carb) / max(t_carb, 1.0)
         macro_score = 1.0 / (1.0 + prot_diff + fat_diff + carb_diff)
         
-        # C. Combined Expert Scoring (Incorporating Provincial RAS)
+        # C. Combined Expert Scoring (BPS Regional alignment is weighted at 45%)
         normalized_density = recipe_density / (np.max(recipe_density) + 1e-5)
         
         final_scores = (
@@ -285,69 +321,137 @@ class NaraRecommender:
         filtered_df["recommendation_score"] = final_scores
         filtered_df["ras_score"] = recipe_ras
         
-        # Sort and take top N
-        recommendations = filtered_df.sort_values(by="recommendation_score", ascending=False).head(limit)
+        # Sort candidates descending
+        candidates = filtered_df.sort_values(by="recommendation_score", ascending=False)
         
-        # ── 6. Explainable AI (XAI) Generation Stage ──
-        output = []
+        # ── 6. Greedy CSP Diversity & Rotation Selector ──
+        # Select 15 recipes in total ensuring protein/starch variety (Max 4 of same category in pool)
+        selected_recipes = []
+        category_counts = collections.defaultdict(int)
+        
+        for idx_val, r in candidates.iterrows():
+            ingredients = self.parsed_ingredients[idx_val]
+            cat = classify_recipe_category(ingredients, r['title'])
+            
+            # CSP Constraint: Max 4 of the same food category in the 15-recipe pool
+            if category_counts[cat] >= 4:
+                continue
+                
+            selected_recipes.append((r, cat, ingredients))
+            category_counts[cat] += 1
+            
+            if len(selected_recipes) >= 15:
+                break
+                
+        # If pool size is less than 15 (highly constrained), fill up with remaining candidates
+        if len(selected_recipes) < 15:
+            for idx_val, r in candidates.iterrows():
+                ingredients = self.parsed_ingredients[idx_val]
+                cat = classify_recipe_category(ingredients, r['title'])
+                # Avoid duplicates
+                if any(x[0]["title"] == r["title"] for x in selected_recipes):
+                    continue
+                selected_recipes.append((r, cat, ingredients))
+                if len(selected_recipes) >= 15:
+                    break
+
+        # Distribute pool: 7 Primary Days (Max 3 of same category in 7-day plan) and 8 Alternatives
+        primary_list = []
+        alternative_list = []
+        primary_cat_counts = collections.defaultdict(int)
+        
+        for item in selected_recipes:
+            r, cat, ingredients = item
+            if len(primary_list) < 7 and primary_cat_counts[cat] < 3:
+                primary_list.append(item)
+                primary_cat_counts[cat] += 1
+            else:
+                alternative_list.append(item)
+                
+        # Safe balance: if primary schedule didn't reach 7, pop from alternatives
+        while len(primary_list) < 7 and alternative_list:
+            primary_list.append(alternative_list.pop(0))
+            
+        # ── 7. Formatting & Explainable AI (XAI) serving portion scaling ──
         prov_display = user_profile.get("province", "Nasional")
+        days_name = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
         
-        for i, (_, r) in enumerate(recommendations.iterrows()):
-            rec_cal = round(r["Recipe Caloric Value"] * 3.0, 1)
-            rec_prot = round(r["Recipe Protein"] * 3.0, 1)
-            rec_fat = round(r["Recipe Fat"] * 3.0, 1)
-            rec_carb = round(r["Recipe Carbohydrates"] * 3.0, 1)
+        def format_recipe(r, cat, ingredients, day_label=None):
+            rec_cal_standard = r["Recipe Caloric Value"] * 3.0
+            rec_prot_standard = r["Recipe Protein"] * 3.0
+            rec_fat_standard = r["Recipe Fat"] * 3.0
+            rec_carb_standard = r["Recipe Carbohydrates"] * 3.0
             density_val = r["Recipe Nutrition Density"]
             ras_val = r["ras_score"]
             
+            # Dynamic serving portion scale multiplier calculation
+            scale_factor = t_cal / max(rec_cal_standard, 1.0)
+            scale_factor = round(scale_factor, 1)
+            # Clip scale factor to reasonable boundaries (0.5x to 2.5x) to avoid absurd volumes
+            scale_factor = max(0.5, min(2.5, scale_factor))
+            
+            scaled_cal = round(rec_cal_standard * scale_factor, 1)
+            scaled_prot = round(rec_prot_standard * scale_factor, 1)
+            scaled_fat = round(rec_fat_standard * scale_factor, 1)
+            scaled_carb = round(rec_carb_standard * scale_factor, 1)
+            
             # Formulate explanations
-            cal_diff = round(rec_cal - t_cal, 1)
-            if abs(cal_diff) <= 25.0:
-                cal_reason = f"Sangat presisi dengan target kalori makan Anda ({cal_diff:+.1f} kkal dari target)."
-            else:
-                cal_reason = f"Mencukupi kalori makan Anda dengan selisih gizi terkontrol ({cal_diff:+.1f} kkal)."
-                
-            prot_err = abs(rec_prot - t_prot) / max(t_prot, 1.0)
+            cal_diff = round(scaled_cal - t_cal, 1)
+            scale_reason = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * 300, 0):.0f}g) untuk mencukupi target kalori Anda ({cal_diff:+.1f} kkal dari target)."
+            
+            prot_err = abs(scaled_prot - t_prot) / max(t_prot, 1.0)
             if prot_err < 0.15:
-                macro_reason = "Memiliki proporsi Protein berkualitas tinggi yang sangat ideal untuk pembentukan otot/recovery."
-            elif rec_prot > t_prot:
-                macro_reason = f"Sangat kaya akan Protein ({rec_prot}g), melebihi target protein makan Anda untuk mendukung metabolisme."
+                macro_reason = "Proporsi Protein ideal untuk mendukung pemulihan otot dan metabolisme."
+            elif scaled_prot > t_prot:
+                macro_reason = f"Kaya Protein ({scaled_prot}g), melebihi target protein makan Anda untuk mendukung metabolisme."
             else:
-                macro_reason = "Menyediakan kombinasi makronutrisi karbohidrat dan lemak yang seimbang."
+                macro_reason = f"Makronutrisi seimbang (P: {scaled_prot}g, C: {scaled_carb}g)."
                 
             if density_val > 1.5:
-                density_reason = f"Kepadatan gizi mikro sangat tinggi ({density_val:.2f}), kaya akan Zat Besi, Kalsium, & Vitamin penting."
+                density_reason = f"Kepadatan gizi mikro tinggi ({density_val:.2f}), kaya akan Zat Besi, Kalsium, & Vitamin penting."
             else:
-                density_reason = f"Menyediakan gizi mikro harian yang seimbang ({density_val:.2f})."
+                density_reason = f"Gizi mikro harian tercukupi ({density_val:.2f})."
                 
-            allergen_reason = f"Diverifikasi 100% aman dan bebas dari alergen Anda: {', '.join(user_allergies) if user_allergies else 'none'}."
+            allergen_reason = f"Aman: Bebas dari alergen Anda: {', '.join(user_allergies) if user_allergies else 'none'}."
             
             if ras_val > 0.6:
-                regional_reason = f"Sangat selaras dengan kebiasaan konsumsi bahan pangan di {prov_display} (bahan pangan lokal melimpah)."
+                regional_reason = f"Pangan Lokal: Sangat selaras dengan konsumsi di {prov_display} (komoditas utama daerah)."
             elif ras_val > 0.2:
-                regional_reason = f"Menggunakan bahan makanan yang lazim dikonsumsi dan mudah dibeli di {prov_display}."
+                regional_reason = f"Ketersediaan: Menggunakan bahan pangan pokok yang mudah didapat di {prov_display}."
             else:
-                regional_reason = "Menggunakan bahan pangan pokok standar nasional."
+                regional_reason = "Menggunakan bahan pokok standar nasional."
                 
-            output.append({
-                "rank": i + 1,
+            res = {
                 "title": r["title"],
                 "score": round(r["recommendation_score"] * 100, 1),
-                "calories_per_serving": rec_cal,
-                "protein_per_serving": rec_prot,
-                "fat_per_serving": rec_fat,
-                "carbs_per_serving": rec_carb,
+                "food_category": cat,
+                "portion_scale_factor": scale_factor,
+                "calories_per_serving": scaled_cal,
+                "protein_per_serving": scaled_prot,
+                "fat_per_serving": scaled_fat,
+                "carbs_per_serving": scaled_carb,
                 "density": density_val,
                 "regional_alignment_score": round(ras_val * 100, 1),
                 "source": r["source"],
                 "explanations": [
-                    cal_reason,
+                    scale_reason,
                     macro_reason,
                     density_reason,
                     allergen_reason,
                     regional_reason
                 ]
-            })
+            }
+            if day_label:
+                res["day"] = day_label
+            return res
+
+        primary_output = []
+        for i, item in enumerate(primary_list):
+            primary_output.append(format_recipe(item[0], item[1], item[2], days_name[i]))
+            
+        alternative_output = []
+        for item in alternative_list[:8]:
+            alternative_output.append(format_recipe(item[0], item[1], item[2]))
             
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
         
@@ -358,7 +462,8 @@ class NaraRecommender:
             "recipes_filtered_out_allergens": n_filtered,
             "recipes_scored_realtime": len(filtered_df),
             "province_aligned": prov_display,
-            "recommendations": output
+            "primary_schedule": primary_output,
+            "alternative_pool": alternative_output
         }
 
 # ──────────────────────────────────────────────
@@ -366,7 +471,7 @@ class NaraRecommender:
 # ──────────────────────────────────────────────
 
 def run_demo():
-    print("🚀 NARA AI-ENGINE: Starting Dynamic Recommendation Engine & Ethical Gatekeeper Demo ...\n")
+    print("🚀 NARA AI-ENGINE: Starting Dynamic 7-Day Portion-Optimized & Diverse Meal Plan Demo ...\n")
     engine = NaraRecommender()
     
     # ── User Profile 1: Weight Loss + Gluten Allergy + Jawa Barat ──
@@ -385,21 +490,28 @@ def run_demo():
     print("\n-------------------------------------------------------")
     print("👤 USER PROFILE 1: Weight Loss (Active) + Gluten Allergy + Jawa Barat")
     print("-------------------------------------------------------")
-    res1 = engine.recommend(user1, limit=2)
+    res1 = engine.recommend(user1)
     if res1["status"] == "success":
-        print(f"📊 Calculated targets per meal: {res1['targets']['caloric_target_meal']} kcal | "
+        print(f"📊 Targets per meal : {res1['targets']['caloric_target_meal']} kcal | "
               f"P: {res1['targets']['protein_target_meal']}g | F: {res1['targets']['fat_target_meal']}g | C: {res1['targets']['carbohydrates_target_meal']}g")
-        print(f"🛡️  Allergen guard filtered out: {res1['recipes_filtered_out_allergens']} recipes containing gluten.")
-        print(f"🌏 Aligned Province          : {res1['province_aligned']}")
-        print(f"⚡ Real-time scoring speed   : {res1['elapsed_ms']} milliseconds!")
-        print("\n🏆 Top 2 Aligned Recommendations with Explainable AI:")
-        for rec in res1["recommendations"]:
-            print(f"  {rec['rank']}. {rec['title']} (Score: {rec['score']}% | Regional Alignment: {rec['regional_alignment_score']}%)")
-            print(f"     Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
+        print(f"🌏 Aligned Province : {res1['province_aligned']}")
+        print(f"⚡ Scoring Speed    : {res1['elapsed_ms']} milliseconds! (Scored {res1['recipes_scored_realtime']} recipes)")
+        
+        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (CSP Rotated) ======")
+        for rec in res1["primary_schedule"]:
+            print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
+            print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
+            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}% | Density: {rec['density']}")
             print(f"     🔍 AI Rationale:")
             for exp in rec["explanations"]:
                 print(f"       👉 {exp}")
-            print()
+            print("  " + "-"*60)
+            
+        print("\n🔄 ====== SWAPPABLE ALTERNATIVES POOL ======")
+        for idx, rec in enumerate(res1["alternative_pool"]):
+            print(f"  Option {idx+1}. {rec['title']} ({rec['food_category'].upper()})")
+            print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
+            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}%")
 
     # ── User Profile 2: Papua comparison (Same parameters but different province) ──
     user2 = {
@@ -417,18 +529,17 @@ def run_demo():
     print("\n-------------------------------------------------------")
     print("👤 USER PROFILE 2: Weight Loss (Active) + Gluten Allergy + Papua (Comparison)")
     print("-------------------------------------------------------")
-    res2 = engine.recommend(user2, limit=2)
+    res2 = engine.recommend(user2)
     if res2["status"] == "success":
-        print(f"🌏 Aligned Province          : {res2['province_aligned']}")
-        print(f"⚡ Real-time scoring speed   : {res2['elapsed_ms']} milliseconds!")
-        print("\n🏆 Top 2 Aligned Recommendations with Explainable AI:")
-        for rec in res2["recommendations"]:
-            print(f"  {rec['rank']}. {rec['title']} (Score: {rec['score']}% | Regional Alignment: {rec['regional_alignment_score']}%)")
-            print(f"     Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
-            print(f"     🔍 AI Rationale:")
-            for exp in rec["explanations"]:
-                print(f"       👉 {exp}")
-            print()
+        print(f"🌏 Aligned Province : {res2['province_aligned']}")
+        print(f"⚡ Scoring Speed    : {res2['elapsed_ms']} milliseconds!")
+        
+        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (BPS Papua Aligned) ======")
+        for rec in res2["primary_schedule"]:
+            print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
+            print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
+            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}%")
+            print("  " + "-"*60)
 
     # ── User Profile 3: Safety Cutoff triggered (Kidney Disease) ──
     user3 = {
@@ -453,9 +564,6 @@ def run_demo():
         print(f"   \"{res3['medical_disclaimer_id']}\"")
         print(f"🛑 Medical Disclaimer EN:")
         print(f"   \"{res3['medical_disclaimer_en']}\"")
-        print(f"📁 Exportable Patient Profile staged for clinical consultation:")
-        print(f"   {json.dumps(res3['exportable_profile'], indent=5)}")
-        print(f"⚡ Safety evaluation speed  : {res3['elapsed_ms']} milliseconds!")
         print("-------------------------------------------------------\n")
 
 if __name__ == "__main__":
