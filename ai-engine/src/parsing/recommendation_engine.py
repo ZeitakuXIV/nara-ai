@@ -77,7 +77,16 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         'very_active': 1.725,
         'extra_active': 1.9
     }
-    activity_factor = multipliers.get(activity_level.lower(), 1.2)
+    # Normalize activity level keys from frontend
+    activity_key = activity_level.lower().strip()
+    activity_map = {
+        'light': 'lightly_active',
+        'moderate': 'moderately_active',
+        'extra': 'extra_active',
+        'very': 'very_active'
+    }
+    activity_key = activity_map.get(activity_key, activity_key)
+    activity_factor = multipliers.get(activity_key, 1.2)
     tdee = bmr * activity_factor
     
     # Calorie Target based on Goals
@@ -220,6 +229,13 @@ class NaraRecommender:
     def __init__(self):
         print("📂 NaraRecommender: Loading master recipe database ...")
         self.df = pd.read_csv(RECIPE_CSV)
+        # Bug #2 Fix: Filter servings outliers (>100) and low structured match rate (<0.3)
+        initial_len = len(self.df)
+        self.df = self.df[
+            (self.df['estimated_servings'] <= 100) & 
+            (self.df['structured_match_rate'] >= 0.3)
+        ].reset_index(drop=True)
+        print(f"🧹 Filtered recipe database: {initial_len} -> {len(self.df)} (removed {initial_len - len(self.df)} recipes with estimated_servings > 100 or structured_match_rate < 0.3)")
         self.allergen_df = pd.read_csv(ALLERGEN_CSV)
         
         # Load regional consumption database
