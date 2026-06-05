@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { calculateBMI, getBmiStatus } from '@/utils/nutrition';
+import { supabase } from '@/utils/supabase';
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -39,33 +40,37 @@ export default function Onboarding() {
     setIsGenerating(true);
 
     try {
-      // Real Async Fetch to Backend
-      const response = await fetch('/api/plan', {
+      // 1. SAVE TO SUPABASE
+      // Storing bio-profile first to ensure persistence
+      await supabase.from('user_profiles').upsert({
+        email: store.email,
+        full_name: store.fullName,
+        gender: store.gender,
+        age: store.age,
+        height: store.height,
+        weight: store.weight,
+        activity_level: store.activity,
+        location: store.location,
+        allergies: store.allergies,
+        dietary_goal: store.goal
+      });
+
+      // 2. CALL AI ENGINE (PRODUCTION ENDPOINT: /api/recommend)
+      const response = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          biometrics: {
-            gender: store.gender,
-            age: store.age,
-            height: store.height,
-            weight: store.weight,
-            activity: store.activity,
-            location: store.location,
-            allergies: store.allergies,
-            goal: store.goal
-          }
-        })
+        body: JSON.stringify(store)
       });
 
       if (response.ok) {
         store.completeOnboarding();
         router.push('/dashboard');
       } else {
-        console.error("Failed to generate plan");
-        setStep(4); // Go back on error
+         throw new Error("AI Recommendation failed");
       }
     } catch (err) {
       console.error(err);
+      alert("Failed to synchronize with NARA Engine. Retrying...");
       setStep(4);
     } finally {
       setIsGenerating(false);
@@ -74,7 +79,7 @@ export default function Onboarding() {
 
   return (
     <div className="app-content px-6 bg-transparent">
-      {/* Header - Balanced for Notch */}
+      {/* Header */}
       {step <= 4 && (
         <header className="w-full max-w-sm mx-auto flex flex-col gap-4 mt-6 mb-6 z-10 shrink-0">
           <div className="flex items-center justify-between">
@@ -189,8 +194,11 @@ export default function Onboarding() {
             <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
               <h1 className="text-2xl font-black text-nara-text tracking-tight">Constraints</h1>
               <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-[0.2em]">Region (Indonesia)</label>
-                 <input type="text" value={store.location} onChange={e => store.setBiometrics({ location: e.target.value })} placeholder="e.g. Jakarta Selatan" className="app-input py-5 font-bold" />
+                 <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Province (Indonesia)</label>
+                    <span className="text-[8px] font-bold text-nara-emerald bg-nara-emerald/10 px-2 py-0.5 rounded-full">Required for API</span>
+                 </div>
+                 <input type="text" value={store.location} onChange={e => store.setBiometrics({ location: e.target.value })} placeholder="e.g. Jawa Barat, DKI Jakarta..." className="app-input py-5 font-bold" />
               </div>
               <div className="space-y-4">
                  <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-[0.2em]">Common Allergies</label>
@@ -228,25 +236,21 @@ export default function Onboarding() {
                 })}
               </div>
               <button disabled={!store.goal || isGenerating} onClick={handleGeneratePlan} className="btn-primary py-5 mt-6">
-                {isGenerating ? 'Processing...' : 'Generate Plan'} <Zap size={20} fill="currentColor" />
+                {isGenerating ? 'Syncing...' : 'Generate Plan'} <Zap size={20} fill="currentColor" />
               </button>
             </motion.div>
           )}
 
           {step > 4 && (
             <motion.div key="fin" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center h-full pt-10">
-              <div className="relative w-32 h-32 mb-10 aspect-square shrink-0">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/30" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                     <div className="w-20 h-20 bg-nara-hunter rounded-[32px] flex items-center justify-center shadow-float animate-pulse">
-                        <span className="text-white font-black text-3xl">N</span>
-                     </div>
+              <div className="relative w-32 h-32 mb-10 flex items-center justify-center">
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/30 w-full h-full" />
+                  <div className="w-20 h-20 bg-nara-hunter rounded-[32px] flex items-center justify-center shadow-float animate-pulse z-10">
+                     <span className="text-white font-black text-3xl">N</span>
                   </div>
               </div>
               <h2 className="text-3xl font-black text-nara-text tracking-tighter uppercase">Calibrating NARA</h2>
-              <p className="text-nara-muted mt-4 max-w-[260px] text-xs font-bold uppercase tracking-[0.2em] leading-loose">
-                Connecting to Inference Engine...
-              </p>
+              <p className="text-nara-muted mt-4 max-w-[260px] text-xs font-bold uppercase tracking-[0.2em] leading-loose">Scaling ingredients for your signature...</p>
             </motion.div>
           )}
         </AnimatePresence>

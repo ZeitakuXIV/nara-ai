@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface UserBiometrics {
+  userId: string | null;
+  email: string | null;
+  fullName: string | null;
   gender: 'male' | 'female' | null;
   age: number;
   height: number; // in cm
@@ -21,6 +24,9 @@ interface UserStore extends UserBiometrics {
 }
 
 const initialState: UserBiometrics & { isOnboarded: boolean } = {
+  userId: null,
+  email: null,
+  fullName: null,
   gender: null,
   age: 0,
   height: 170,
