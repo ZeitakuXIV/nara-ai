@@ -10,8 +10,8 @@ export default function FloatingChat() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
-  // Don't show on Auth pages
-  const isHiddenPage = pathname === '/';
+  // Don't show on Auth or Chat pages
+  const isHiddenPage = pathname === '/' || pathname === '/chat';
 
   useEffect(() => {
     setMounted(true);

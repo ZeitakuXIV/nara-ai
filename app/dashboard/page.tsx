@@ -77,24 +77,16 @@ export default function Dashboard() {
 
   const handleMealClick = (index: number) => {
     setActiveMealIndex(index);
-    // Ultra-smooth scroll to the analysis section
-    if (detailRef.current) {
-      const offset = 100; // Adjust for some breathing room
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = detailRef.current.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
+    // Smooth scroll to the analysis section below
+    setTimeout(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   return (
     <div className="app-content bg-nara-light">
       
+      {/* Top Bar */}
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.2em] mb-1 opacity-60">
@@ -108,6 +100,7 @@ export default function Dashboard() {
       </header>
 
       <main className="px-6 flex-1 z-10 space-y-8 pb-40">
+        {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
           {MOCK_MEAL_PLAN.map((d) => (
             <button
@@ -125,6 +118,7 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Carousel Area */}
         <div className="space-y-4">
            <div className="flex items-center justify-between px-1">
               <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -143,7 +137,14 @@ export default function Dashboard() {
                         activeMealIndex === idx ? 'border-nara-hunter' : 'border-transparent'
                      }`}
                    >
-                      <Image src={meal.image} alt={meal.title} fill className="object-cover" priority unoptimized />
+                      <Image 
+                        src={meal.image} 
+                        alt={meal.title} 
+                        fill 
+                        className="object-cover" 
+                        priority 
+                        unoptimized 
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute top-6 left-6 flex gap-2">
                          <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 text-[10px] text-white font-black uppercase tracking-wider">{meal.type}</div>
@@ -163,7 +164,7 @@ export default function Dashboard() {
                    <Zap size={32} className="text-nara-hunter animate-pulse" />
                 </div>
                 <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Optimizing Day {selectedDay.id}</h3>
-                <p className="text-xs text-nara-muted leading-relaxed max-w-[200px]">Calibrating local recipes for your signature biometrics...</p>
+                <p className="text-xs text-nara-muted leading-relaxed max-w-[220px]">Calibrating local recipes for your signature biometrics...</p>
              </div>
            )}
         </div>
@@ -188,7 +189,16 @@ export default function Dashboard() {
                <div className="h-32 w-full relative flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
-                        <Pie data={chartData} innerRadius={40} outerRadius={55} paddingAngle={5} dataKey="value">
+                        <Pie 
+                          data={chartData} 
+                          innerRadius={40} 
+                          outerRadius={55} 
+                          paddingAngle={5} 
+                          dataKey="value"
+                          isAnimationActive={true}
+                          animationBegin={0}
+                          animationDuration={800}
+                        >
                            {chartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
                         </Pie>
                      </PieChart>

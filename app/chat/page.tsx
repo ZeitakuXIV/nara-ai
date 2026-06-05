@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Send, User, MoreVertical, Plus, Calendar, MessageSquare, ShieldCheck, Loader2, Target } from 'lucide-react';
+import { Send, User, MoreVertical, Plus, Calendar, ShieldCheck, Loader2, Target } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 
 const INITIAL_MESSAGES = [
   { id: 1, sender: 'nara', text: "Hello! I'm NARA, your Nutrition Agent. I'm connected to the XAI Inference Engine.", timestamp: '09:00' },
+  { id: 2, sender: 'nara', text: "Based on my reasoning, I've scaled your portions to match your goals. Portions are increased by 15% to hit your protein threshold.", timestamp: '09:01', isXAI: true }
 ];
 
 export default function Chatbot() {
