@@ -25,50 +25,54 @@ export default function Dashboard() {
   // Load real data from Supabase
   useEffect(() => {
     const fetchLatestPlan = async () => {
-      if (!store.email) return;
+      // Prioritize userId if available, fallback to email
+      const identifier = store.userId || store.email;
+      if (!identifier) {
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        // 1. Get user profile
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('email', store.email)
-          .single();
+        let userQuery;
+        if (store.userId) {
+          userQuery = supabase.from('user_profiles').select('id').eq('id', store.userId).single();
+        } else {
+          userQuery = supabase.from('user_profiles').select('id').eq('email', store.email).single();
+        }
+        
+        const { data: profile } = await userQuery;
 
-        if (!profile) return;
+        if (!profile) {
+           setIsLoading(false);
+           return;
+        }
 
-        // 2. Get latest meal plan
+        // Fetch latest meal plan for this specific user
         const { data: plan, error } = await supabase
           .from('meal_plans')
           .select('*')
           .eq('user_id', profile.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (plan && plan.plan_data) {
-          // Normalize plan_data to ensure it has all needed fields for UI
-          const normalizedPool = plan.plan_data.map((item: any, i: number) => ({
+        if (plan && plan.plan_data && Array.isArray(plan.plan_data)) {
+          // Sync mealPool with REAL AI data
+          const realPool = plan.plan_data.map((item: any, i: number) => ({
             id: item.id || `recipe_${i}`,
-            title: item.title || item.recipe_name || 'NARA Specialty',
+            title: item.title || item.recipe_name || 'NARA Selection',
             image: item.image || `https://images.unsplash.com/photo-${[
                 '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
               ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
-            calories: item.calories || 400,
-            protein: item.protein || 25,
-            carbs: item.carbs || 45,
-            fat: item.fat || 12,
+            calories: item.calories || 0,
+            protein: item.protein || 0,
+            carbs: item.carbs || 0,
+            fat: item.fat || 0,
             scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
-            ingredients: item.ingredients || [
-              { name: 'Protein Source', qty: '150g' },
-              { name: 'Carbohydrate', qty: '100g' }
-            ]
+            ingredients: item.ingredients || []
           }));
           
-          setMealPool(normalizedPool);
-        } else {
-           // Fallback to trigger recommendation if none exists (Cold Start)
-           console.log("No plan found, please complete onboarding.");
+          setMealPool(realPool);
         }
       } catch (err) {
         console.error("Dashboard Load Error:", err);
@@ -78,14 +82,15 @@ export default function Dashboard() {
     };
 
     fetchLatestPlan();
-  }, [store.email]);
+  }, [store.email, store.userId]);
 
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
-  const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex] : null;
+  // SAFETY: Check if index exists in the REAL pool
+  const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex % mealPool.length] : null;
 
   const chartData = currentMeal ? [
     { name: 'Protein', value: currentMeal.protein, color: '#3D644D' },
@@ -99,7 +104,6 @@ export default function Dashboard() {
     setWeeklyPlanIndices(newPlan);
     setIsSwapModalOpen(false);
     
-    // Smooth scroll feedback
     setTimeout(() => {
       detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
@@ -109,7 +113,7 @@ export default function Dashboard() {
     return (
       <div className="app-content bg-nara-light flex flex-col items-center justify-center">
          <Loader2 className="text-nara-hunter animate-spin mb-4" size={40} />
-         <p className="text-sm font-black text-nara-hunter uppercase tracking-widest">Sensing Bio-Data...</p>
+         <p className="text-sm font-black text-nara-hunter uppercase tracking-widest animate-pulse">Sensing Bio-Data...</p>
       </div>
     );
   }
@@ -120,11 +124,11 @@ export default function Dashboard() {
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.2em] mb-1 opacity-60">
-             Personal Goal: {store.goal}
+             Personal Goal: {store.goal || 'Calculating...'}
            </p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white">
+        <div className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-95 transition-all">
            <Calendar className="text-nara-hunter" size={20} />
         </div>
       </header>
@@ -148,12 +152,12 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Featured Meal Card */}
+        {/* Real AI Recommendation Card */}
         {currentMeal ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between px-1">
                 <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Utensils size={14} /> Today&apos;s Recommendation
+                  <Utensils size={14} /> AI Expert Choice
                 </h2>
                 <button 
                   onClick={() => setIsSwapModalOpen(true)}
@@ -168,19 +172,19 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer"
+              className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer active:scale-[0.99] transition-transform"
             >
                 <Image src={currentMeal.image} alt={currentMeal.title} fill className="object-cover" priority unoptimized />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
                 <div className="absolute top-6 left-6 flex gap-2">
                   <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
                     {currentMeal.calories} KCAL
                   </div>
                 </div>
                 <div className="absolute bottom-10 left-8 right-8 text-left">
-                  <p className="text-nara-emerald font-black text-[10px] uppercase tracking-[0.3em] mb-2">Expert Selection</p>
+                  <p className="text-nara-emerald font-black text-[10px] uppercase tracking-[0.3em] mb-2">Target Calibration</p>
                   <h3 className="text-white text-3xl font-black leading-tight mb-4 tracking-tight">{currentMeal.title}</h3>
-                  <div className="flex gap-4 opacity-80">
+                  <div className="flex gap-4 opacity-90">
                       <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">P</span><span className="text-white text-xs font-black">{currentMeal.protein}g</span></div>
                       <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">C</span><span className="text-white text-xs font-black">{currentMeal.carbs}g</span></div>
                       <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">F</span><span className="text-white text-xs font-black">{currentMeal.fat}g</span></div>
@@ -191,9 +195,9 @@ export default function Dashboard() {
         ) : (
           <div className="glass-container p-12 flex flex-col items-center justify-center text-center bg-white/20">
              <Zap size={32} className="text-nara-hunter animate-pulse mb-6" />
-             <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Awaiting Analysis</h3>
-             <p className="text-sm text-nara-muted leading-relaxed">Complete onboarding to generate your personalized NARA plan.</p>
-             <Link href="/onboarding" className="btn-primary mt-8 py-4">Start Onboarding</Link>
+             <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">No Bio-Plan Found</h3>
+             <p className="text-xs text-nara-muted leading-relaxed max-w-[220px]">We couldn&apos;t find your signature plan. Let&apos;s calibrate your metrics now.</p>
+             <Link href="/onboarding" className="btn-primary mt-8 py-4 px-8">Sync with NARA</Link>
           </div>
         )}
 
@@ -240,12 +244,16 @@ export default function Dashboard() {
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
-                  {currentMeal.ingredients.map((ing: any, i: number) => (
-                     <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
-                        <span className="text-sm font-bold text-nara-text">{ing.name}</span>
-                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount}</span>
-                     </div>
-                  ))}
+                  {currentMeal.ingredients && currentMeal.ingredients.length > 0 ? (
+                    currentMeal.ingredients.map((ing: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
+                          <span className="text-sm font-bold text-nara-text">{ing.name}</span>
+                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-nara-muted italic text-center py-4">Ingredient breakdown currently being scaled...</p>
+                  )}
                </div>
             </div>
           </div>
@@ -258,22 +266,25 @@ export default function Dashboard() {
           <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 backdrop-blur-md">
              <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="w-full max-w-md h-[80vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                   <h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool (Top 20)</h2>
-                   <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90"><X size={20} /></button>
+                   <div>
+                      <h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool</h2>
+                      <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Top 20 Matched Recommendations</p>
+                   </div>
+                   <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"><X size={20} /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
                    {mealPool.map((meal, idx) => {
                       const isActive = weeklyPlanIndices[selectedDayIndex] === idx;
                       return (
-                        <button key={meal.id} onClick={() => handleSwapRecipe(idx)} className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${isActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100'}`}>
-                           <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0">
+                        <button key={meal.id} onClick={() => handleSwapRecipe(idx)} className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${isActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100 shadow-sm'}`}>
+                           <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0 border border-slate-50">
                               <Image src={meal.image} alt={meal.title} fill className="object-cover" unoptimized />
                            </div>
                            <div className="flex-1 text-left">
                               <h4 className="font-bold text-nara-text text-sm leading-tight">{meal.title}</h4>
-                              <p className="text-[10px] text-slate-400 font-bold">{meal.calories} KCAL • {meal.protein}g Protein</p>
+                              <p className="text-[10px] text-slate-400 font-bold mt-1">{meal.calories} KCAL • {meal.protein}g Protein</p>
                            </div>
-                           {isActive ? <div className="w-8 h-8 rounded-full bg-nara-hunter flex items-center justify-center text-white"><Check size={16} /></div> : <RefreshCw size={16} className="text-slate-200" />}
+                           {isActive ? <div className="w-8 h-8 rounded-full bg-nara-hunter flex items-center justify-center text-white shadow-soft"><Check size={16} /></div> : <RefreshCw size={16} className="text-slate-200" />}
                         </button>
                       );
                    })}

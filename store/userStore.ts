@@ -36,7 +36,7 @@ const initialState: UserBiometrics & { isOnboarded: boolean } = {
   allergies: [],
   goal: null,
   isOnboarded: false,
-};
+  };
 
 export const useUserStore = create<UserStore>()(
   persist(
