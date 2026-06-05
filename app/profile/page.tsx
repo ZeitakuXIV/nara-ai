@@ -11,21 +11,18 @@ import {
   MapPin, 
   Save, 
   RotateCcw,
-  MessageSquare,
-  Calendar,
   Target
 } from 'lucide-react';
+import { useUserStore } from '@/store/userStore';
 
 export default function Profile() {
-  const [weight, setWeight] = useState(65);
-  const [height, setHeight] = useState(170);
-  const [age, setAge] = useState(24);
-  const [location, setLocation] = useState('Jakarta Selatan');
+  const store = useUserStore();
 
   const bmi = useMemo(() => {
-    const heightInMeters = height / 100;
-    return parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
-  }, [height, weight]);
+    const heightInMeters = store.height / 100;
+    if (!heightInMeters) return 0;
+    return parseFloat((store.weight / (heightInMeters * heightInMeters)).toFixed(1));
+  }, [store.height, store.weight]);
 
   return (
     <div className="app-content bg-nara-light">
@@ -67,7 +64,7 @@ export default function Profile() {
                        <Weight size={16} /> <span className="text-[10px] font-black uppercase">Weight</span>
                     </div>
                     <div className="flex items-center gap-1">
-                       <input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
+                       <input type="number" value={store.weight} onChange={(e) => store.setBiometrics({ weight: Number(e.target.value) })} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
                        <span className="text-sm font-bold text-slate-400">kg</span>
                     </div>
                  </div>
@@ -76,7 +73,7 @@ export default function Profile() {
                        <Ruler size={16} /> <span className="text-[10px] font-black uppercase">Height</span>
                     </div>
                     <div className="flex items-center gap-1">
-                       <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
+                       <input type="number" value={store.height} onChange={(e) => store.setBiometrics({ height: Number(e.target.value) })} className="w-full bg-transparent text-3xl font-black text-nara-text focus:outline-none" />
                        <span className="text-sm font-bold text-slate-400">cm</span>
                     </div>
                  </div>
@@ -87,7 +84,7 @@ export default function Profile() {
                     <div className="w-12 h-12 rounded-2xl bg-nara-hunter/10 flex items-center justify-center text-nara-hunter shrink-0"><AgeIcon size={24} /></div>
                     <div className="min-w-0">
                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Age</span>
-                       <input type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} className="w-full bg-transparent text-xl font-black text-nara-text focus:outline-none" />
+                       <input type="number" value={store.age} onChange={(e) => store.setBiometrics({ age: Number(e.target.value) })} className="w-full bg-transparent text-xl font-black text-nara-text focus:outline-none" />
                     </div>
                  </div>
                  <div className="h-12 w-[1px] bg-slate-100 shrink-0" />
@@ -96,8 +93,8 @@ export default function Profile() {
                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Region</span>
                        <input 
                          type="text" 
-                         value={location} 
-                         onChange={(e) => setLocation(e.target.value)} 
+                         value={store.location} 
+                         onChange={(e) => store.setBiometrics({ location: e.target.value })} 
                          className="w-full bg-transparent text-sm font-bold text-nara-text text-right focus:outline-none truncate" 
                        />
                     </div>
@@ -107,24 +104,18 @@ export default function Profile() {
            </div>
         </section>
 
-        {/* Action Area */}
         <div className="flex flex-col gap-4 pt-6">
            <Link href="/dashboard" className="btn-primary py-5 shadow-xl"><Save size={20} /> Deploy Changes</Link>
-           <Link href="/onboarding" className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</Link>
+           <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
         </div>
       </main>
 
-      {/* Nav Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
-         <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
+      <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-center gap-12 px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
+         <Link href="/dashboard" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors max-w-[80px]">
             <Target size={24} />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>
          </Link>
-         <Link href="/chat" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
-            <MessageSquare size={24} />
-            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Chat</span>
-         </Link>
-         <Link href="/profile" className="nav-hitbox text-nara-hunter">
+         <Link href="/profile" className="nav-hitbox text-nara-hunter max-w-[80px]">
             <User size={24} fill="currentColor" className="opacity-80" />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span>
          </Link>

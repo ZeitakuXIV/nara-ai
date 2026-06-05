@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, MessageSquare, User, ShieldCheck, Utensils, Zap } from 'lucide-react';
+import { Calendar, User, ShieldCheck, Utensils, Zap, Target } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useUserStore } from '@/store/userStore';
 import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
@@ -51,11 +51,10 @@ const MOCK_MEAL_PLAN = [
 export default function Dashboard() {
   const [selectedDay, setSelectedDay] = useState(MOCK_MEAL_PLAN[0]);
   const [activeMealIndex, setActiveMealIndex] = useState(0);
+  const detailRef = useRef<HTMLDivElement>(null);
   
-  // Real State from Zustand
   const store = useUserStore();
 
-  // Dynamic Math Engine
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
@@ -64,10 +63,7 @@ export default function Dashboard() {
     ? selectedDay.meals[activeMealIndex] || selectedDay.meals[0]
     : null;
 
-  // In a real app, the backend would split the targetMacros per meal. 
-  // For now, we simulate the meal taking a percentage of the total daily target.
   const mealRatio = currentMeal?.type === 'Breakfast' ? 0.3 : 0.4;
-  
   const dynamicMealCalories = Math.round(targetMacros.calories * mealRatio);
   const dynamicProtein = Math.round(targetMacros.protein * mealRatio);
   const dynamicCarbs = Math.round(targetMacros.carbs * mealRatio);
@@ -79,10 +75,17 @@ export default function Dashboard() {
     { name: 'Fat', value: dynamicFat, color: '#5A8B6A' },
   ] : [];
 
+  const handleMealClick = (index: number) => {
+    setActiveMealIndex(index);
+    // Smooth scroll to the analysis section below
+    setTimeout(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   return (
     <div className="app-content bg-nara-light">
       
-      {/* Top Bar */}
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.2em] mb-1 opacity-60">
@@ -96,7 +99,6 @@ export default function Dashboard() {
       </header>
 
       <main className="px-6 flex-1 z-10 space-y-8 pb-40">
-        {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
           {MOCK_MEAL_PLAN.map((d) => (
             <button
@@ -114,7 +116,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Carousel Area */}
         <div className="space-y-4">
            <div className="flex items-center justify-between px-1">
               <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -127,21 +128,14 @@ export default function Dashboard() {
                 {selectedDay.meals.map((meal, idx) => (
                    <motion.button
                      key={idx}
-                     onClick={() => setActiveMealIndex(idx)}
+                     onClick={() => handleMealClick(idx)}
                      whileTap={{ scale: 0.98 }}
                      className={`relative min-w-[280px] h-[380px] rounded-[48px] overflow-hidden shadow-soft border-4 transition-all ${
                         activeMealIndex === idx ? 'border-nara-hunter' : 'border-transparent'
                      }`}
                    >
-                      <Image 
-                        src={meal.image} 
-                        alt={meal.title} 
-                        fill 
-                        className="object-cover" 
-                        priority 
-                        unoptimized 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                      <Image src={meal.image} alt={meal.title} fill className="object-cover" priority unoptimized />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute top-6 left-6 flex gap-2">
                          <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 text-[10px] text-white font-black uppercase tracking-wider">{meal.type}</div>
                          <div className="bg-nara-hunter/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
@@ -166,8 +160,7 @@ export default function Dashboard() {
         </div>
 
         {currentMeal && (
-          <div className="space-y-6">
-            {/* Macro Distribution */}
+          <div className="space-y-6" ref={detailRef}>
             <div className="glass-container p-8 grid grid-cols-2 gap-4 shadow-xl">
                <div className="flex flex-col justify-center">
                   <h3 className="text-[11px] font-black text-nara-text mb-4 uppercase tracking-widest opacity-60">Macro Distribution</h3>
@@ -198,7 +191,6 @@ export default function Dashboard() {
                </div>
             </div>
 
-            {/* XAI Reasoning */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-7 rounded-[40px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-float relative overflow-hidden">
                <div className="flex items-center gap-2 mb-3">
                   <ShieldCheck size={18} className="text-nara-emerald" />
@@ -209,7 +201,6 @@ export default function Dashboard() {
                </p>
             </motion.div>
 
-            {/* Ingredients */}
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
@@ -225,17 +216,12 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Industrial Nav Bar */}
-      <nav className="fixed bottom-0 left-0 w-full h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-around px-6 z-[100] pb-[calc(16px+env(safe-area-inset-bottom))]">
-         <Link href="/dashboard" className="nav-hitbox text-nara-hunter">
-            <Calendar size={24} fill="currentColor" />
+      <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-center gap-12 px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
+         <Link href="/dashboard" className="nav-hitbox text-nara-hunter max-w-[80px]">
+            <Target size={24} fill="currentColor" />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>
          </Link>
-         <Link href="/chat" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
-            <MessageSquare size={24} />
-            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Chat</span>
-         </Link>
-         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors">
+         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors max-w-[80px]">
             <User size={24} />
             <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span>
          </Link>

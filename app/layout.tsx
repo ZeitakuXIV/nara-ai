@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PWAInstallGuide from "./components/PWAInstallGuide";
+import FloatingChat from "./components/FloatingChat";
 
 export const metadata: Metadata = {
   title: "NARA",
@@ -38,6 +39,7 @@ export default function RootLayout({
         </div>
 
         <PWAInstallGuide />
+        <FloatingChat />
         
         <main className="h-screen w-full flex flex-col relative overflow-hidden">
           {children}

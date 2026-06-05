@@ -235,12 +235,14 @@ export default function Onboarding() {
 
           {step > 4 && (
             <motion.div key="fin" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex-1 flex flex-col items-center justify-center text-center h-full pt-10">
-              <div className="relative w-32 h-32 mb-10 aspect-square shrink-0">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/30" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                     <div className="w-20 h-20 bg-nara-hunter rounded-[32px] flex items-center justify-center shadow-float animate-pulse">
-                        <span className="text-white font-black text-3xl">N</span>
-                     </div>
+              <div className="relative w-32 h-32 mb-10 flex items-center justify-center">
+                  <motion.div 
+                    animate={{ rotate: 360 }} 
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }} 
+                    className="absolute inset-0 rounded-full border-4 border-dashed border-nara-hunter/30 w-full h-full" 
+                  />
+                  <div className="w-20 h-20 bg-nara-hunter rounded-[32px] flex items-center justify-center shadow-float animate-pulse z-10">
+                    <span className="text-white font-black text-3xl">N</span>
                   </div>
               </div>
               <h2 className="text-3xl font-black text-nara-text tracking-tighter uppercase">Calibrating NARA</h2>
