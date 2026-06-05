@@ -43,6 +43,7 @@ export default function Chatbot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsg,
+          email: store.email, // Pass user email from store
           context: {
             goal: store.goal,
             bmi: (store.weight / Math.pow(store.height / 100, 2)).toFixed(1)
