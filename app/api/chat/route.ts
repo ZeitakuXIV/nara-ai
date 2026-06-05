@@ -1,46 +1,85 @@
 import { NextResponse } from 'next/server';
 
-// Python Microservice configuration
-const PYTHON_MICROSERVICE_URL = process.env.NEXT_PUBLIC_AI_ENGINE_URL || 'http://127.0.0.1:8000';
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { message, context } = body;
 
-    // 1. FORWARD TO PYTHON NARA AGENT (using google-adk)
-    const aiResponse = await fetch(`${PYTHON_MICROSERVICE_URL}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        context: {
-          ...context,
-          email: body.email // Adding email here so Python can fetch meal plan
-        }
-      }),
-    });
+    const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT!;
+    const LOCATION = process.env.GOOGLE_CLOUD_LOCATION!;
+    const AGENT_ID = process.env.GOOGLE_AGENT_ID!;
+    const ACCESS_TOKEN = process.env.GOOGLE_ACCESS_TOKEN!; // dari gcloud / service account
 
-    if (!aiResponse.ok) {
-        const errorText = await aiResponse.text();
-        console.error("AI Engine Chat Error:", errorText);
-        throw new Error(`Failed to get response from Nara Agent. Status: ${aiResponse.status}`);
+    // 🔥 Inject data user ke prompt (INI GANTI systemInstruction)
+    const enrichedMessage = `
+User Goal: ${context?.goal || 'General Health Improvement'}
+BMI Data: ${JSON.stringify(context?.bmi || {})}
+Meal Plan: ${JSON.stringify(context?.mealPlan || {})}
+
+User Message:
+${message}
+`;
+
+    // 🟢 STEP 1: Create session
+    const sessionRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}/sessions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      }
+    );
+
+    const sessionData = await sessionRes.json();
+
+    if (!sessionRes.ok) {
+      throw new Error(sessionData.error?.message || 'Failed to create session');
     }
 
-    const data = await aiResponse.json();
+    // 🟢 STEP 2: Send message ke agent
+    const chatRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${sessionData.name}:sendMessage`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: {
+            role: "user",
+            content: enrichedMessage
+          }
+        })
+      }
+    );
+
+    const chatData = await chatRes.json();
+
+    if (!chatRes.ok) {
+      throw new Error(chatData.error?.message || 'Chat failed');
+    }
+
+    // 🔥 Ambil response dari agent
+    const aiText =
+      chatData.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "I'm sorry, I couldn't generate a response.";
 
     return NextResponse.json({
       success: true,
-      response: data.response,
-      isXAI: data.isXAI || true
+      response: aiText,
+      isAgent: true
     });
 
-  } catch (err) {
-    console.error("AGENT ERROR:", err);
+  } catch (error) {
+    console.error("Agent Error:", error);
 
     return NextResponse.json({
-      error: "Agent gagal terhubung",
-      details: err instanceof Error ? err.message : "Unknown Error"
+      error: "Gagal terhubung ke Agent Gemini.",
+      details: error instanceof Error ? error.message : "Internal Server Error"
     }, { status: 500 });
   }
 }
