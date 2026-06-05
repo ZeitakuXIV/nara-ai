@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -12,9 +12,11 @@ import {
   Save, 
   RotateCcw,
   Target,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
+import { supabase } from '@/utils/supabase';
 
 const INDONESIAN_PROVINCES = [
   "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", 
@@ -29,12 +31,42 @@ const INDONESIAN_PROVINCES = [
 
 export default function Profile() {
   const store = useUserStore();
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
 
   const bmi = useMemo(() => {
     const heightInMeters = store.height / 100;
     if (!heightInMeters) return 0;
     return parseFloat((store.weight / (heightInMeters * heightInMeters)).toFixed(1));
   }, [store.height, store.weight]);
+
+  const handleDeployChanges = async () => {
+    setIsSaving(true);
+    try {
+      // 1. Persist updated biometrics to Supabase
+      if (store.userId) {
+        await supabase.from('user_profiles').update({
+          weight: store.weight,
+          height: store.height,
+          age: store.age,
+          location: store.location,
+        }).eq('id', store.userId);
+      }
+
+      // 2. Clear cached meal plan so dashboard triggers a fresh AI recommendation
+      store.clearMealPlan();
+
+      // 3. Navigate to dashboard — it will detect mealPlan === null and re-fetch
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Failed to save profile changes:', err);
+      // Navigate anyway — worst case the old plan is still shown
+      store.clearMealPlan();
+      router.push('/dashboard');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="app-content bg-nara-light">
@@ -128,7 +160,14 @@ export default function Profile() {
         </section>
 
         <div className="flex flex-col gap-4 pt-6">
-           <Link href="/dashboard" className="btn-primary py-5 shadow-xl"><Save size={20} /> Deploy Changes</Link>
+           <button
+             onClick={handleDeployChanges}
+             disabled={isSaving}
+             className="btn-primary py-5 shadow-xl disabled:opacity-60"
+           >
+             {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+             {isSaving ? 'Saving...' : 'Deploy Changes'}
+           </button>
            <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
         </div>
       </main>

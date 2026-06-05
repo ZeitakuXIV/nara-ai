@@ -33,6 +33,7 @@ interface UserStore extends UserBiometrics {
   setBiometrics: (data: Partial<UserBiometrics>) => void;
   toggleAllergy: (allergy: string) => void;
   setMealPlan: (plan: Recipe[]) => void;
+  clearMealPlan: () => void; // Clear only meal plan, keep profile intact
   completeOnboarding: () => void;
   resetProfile: () => void;
 }
@@ -64,6 +65,7 @@ export const useUserStore = create<UserStore>()(
           : [...state.allergies, allergy],
       })),
       setMealPlan: (plan) => set({ mealPlan: plan }),
+      clearMealPlan: () => set({ mealPlan: null }),
       completeOnboarding: () => set({ isOnboarded: true }),
       resetProfile: () => set(initialState),
     }),

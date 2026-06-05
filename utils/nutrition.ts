@@ -7,7 +7,8 @@ export const ACTIVITY_MULTIPLIERS: Record<string, number> = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
-  extra: 1.725,
+  extra: 1.9,         // was 1.725, aligned with Python engine
+  extra_active: 1.9,  // alias used by Python engine
 };
 
 export function calculateBMI(weight: number, heightCm: number): number {
