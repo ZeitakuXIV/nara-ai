@@ -132,6 +132,50 @@ def find_best_food_match(item: str, category_means: dict, inverted_index: dict, 
     return global_fallback_row, "fallback_global"
 
 # ──────────────────────────────────────────────
+# Mappings & Helpers for Nutrient Retention
+# ──────────────────────────────────────────────
+
+NUTRIENT_NAME_MAP = {
+    'Calcium': 'calcium, ca',
+    'Iron': 'iron, fe',
+    'Magnesium': 'magnesium, mg',
+    'Phosphorus': 'phosphorus, p',
+    'Potassium': 'potassium, k',
+    'Sodium': 'sodium, na',
+    'Zinc': 'zinc, zn',
+    'Copper': 'copper, cu',
+    'Vitamin C': 'vitamin c, total ascorbic acid',
+    'Vitamin B1': 'thiamin',
+    'Vitamin B2': 'riboflavin',
+    'Vitamin B3': 'niacin',
+    'Vitamin B6': 'vitamin b-6',
+    'Vitamin B11': 'folate, total',
+    'Vitamin B12': 'vitamin b-12',
+    'Vitamin A': 'vitamin a, re',
+    'Vitamin D': 'vitamin d',
+    'Vitamin E': 'vitamin e',
+    'Vitamin K': 'vitamin k'
+}
+
+def get_food_group_code(food_name: str) -> str:
+    name = food_name.lower()
+    if any(x in name for x in ['chicken', 'turkey', 'poultry', 'duck', 'ayam', 'bebek']):
+        return '05'  # Poultry Products
+    if any(x in name for x in ['beef', 'pork', 'lamb', 'mutton', 'veal', 'sapi', 'kambing', 'daging']):
+        return '07'  # Red Meat Products
+    if any(x in name for x in ['fish', 'tuna', 'salmon', 'mackerel', 'seafood', 'shrimp', 'crab', 'cumi', 'udang', 'ikan']):
+        return '15'  # Finfish and Shellfish Products
+    if any(x in name for x in ['egg', 'telur', 'telor', 'cheese', 'milk', 'keju', 'susu', 'butter', 'mentega']):
+        return '01'  # Dairy and Egg Products
+    if any(x in name for x in ['rice', 'bread', 'wheat', 'flour', 'nasi', 'beras', 'tepung', 'pasta', 'noodle', 'mie', 'gandum']):
+        return '20'  # Cereal Grains and Pasta
+    if any(x in name for x in ['bean', 'pea', 'lentil', 'peanut', 'soy', 'tofu', 'tempeh', 'tahu', 'tempe', 'kacang']):
+        return '16'  # Legumes and Legume Products
+    if any(x in name for x in ['apple', 'banana', 'orange', 'fruit', 'buah', 'pisang', 'mangga', 'pepaya', 'jeruk']):
+        return '09'  # Fruits and Fruit Juices
+    return '11'  # Vegetables and Vegetable Products (default fallback)
+
+# ──────────────────────────────────────────────
 # Main Compiler Function
 # ──────────────────────────────────────────────
 
@@ -141,6 +185,31 @@ def compile_recipe_nutrition() -> None:
         raise FileNotFoundError(f"Missing master nutrition database at: {NUTRITION_CSV}")
         
     nut_df = pd.read_csv(NUTRITION_CSV)
+
+    # ── Load USDA Nutrient Retention Factors ──
+    RETENTION_CSV = os.path.join(BASE_DIR, "datasets/master/master_retention_factors.csv")
+    retention_map = collections.defaultdict(dict)
+    
+    if os.path.exists(RETENTION_CSV):
+        print("📂 Loading USDA Nutrient Retention Factors ...")
+        ret_df = pd.read_csv(RETENTION_CSV)
+        for _, r_row in ret_df.iterrows():
+            f_grp = str(r_row['fdgrp_cd']).strip().zfill(2)
+            nut_desc = str(r_row['nutr_desc']).strip().lower()
+            desc_clean = str(r_row['retn_desc']).lower()
+            
+            method = 'raw'
+            if 'baked' in desc_clean or 'broiled' in desc_clean or 'reheated' in desc_clean:
+                method = 'baked'
+            elif 'boiled' in desc_clean or 'cooked' in desc_clean or 'canned' in desc_clean:
+                method = 'boiled'
+            elif 'fried' in desc_clean:
+                method = 'fried'
+            elif 'steamed' in desc_clean:
+                method = 'steamed'
+                
+            ret_factor = float(r_row['retn_factor'])
+            retention_map[method][(f_grp, nut_desc)] = ret_factor
     
     # ── Convert DataFrame to Plain Dict List to bypass Pandas overhead ──
     print("⚡ Converting nutrition database to plain python dicts for speed ...")
@@ -192,6 +261,10 @@ def compile_recipe_nutrition() -> None:
     match_methods = {}
     
     print("\n🔬 Processing recipes and summing up ingredients ...")
+    
+    # Import cooking classifier from Advanced Parser
+    from src.parsing.recipe_advanced_parser import classify_cooking_method
+    
     for idx, row in recipe_df.iterrows():
         raw_struct = row.get('structured_ingredients', '[]')
         
@@ -200,6 +273,10 @@ def compile_recipe_nutrition() -> None:
             ingredients = json.loads(raw_struct)
         except:
             ingredients = []
+            
+        # Classify the recipe cooking method dynamically
+        recipe_instructions = str(row.get('instructions', ''))
+        cooking_method = classify_cooking_method(recipe_instructions)
             
         recipe_totals = {col: 0.0 for col in TARGET_COLS}
         total_weight = 0.0
@@ -222,10 +299,25 @@ def compile_recipe_nutrition() -> None:
             if "fallback" not in method:
                 matched_count += 1
                 
-            # Sum up nutrients based on gram weight
+            # Sum up nutrients based on gram weight and cooking retention factors
             scale = grams / 100.0
+            f_grp = get_food_group_code(match_row['food'])
+            
             for col in TARGET_COLS:
-                recipe_totals[col] += float(match_row[col]) * scale
+                raw_val = float(match_row[col]) * scale
+                
+                # Apply USDA Nutrient Retention factor if cooking method has nutrient loss
+                ret_factor = 1.0
+                if cooking_method != 'raw':
+                    usda_nut_name = NUTRIENT_NAME_MAP.get(col)
+                    if usda_nut_name:
+                        # Try specific food group first
+                        ret_factor = retention_map.get(cooking_method, {}).get((f_grp, usda_nut_name), 1.0)
+                        if ret_factor == 1.0:
+                            # Fallback to general vegetable group (highly safe default for vegetables & tubers)
+                            ret_factor = retention_map.get(cooking_method, {}).get(('11', usda_nut_name), 1.0)
+                
+                recipe_totals[col] += raw_val * ret_factor
 
         # Calculate estimated servings (assuming average 300g per serving, min 1)
         servings = max(1.0, round(total_weight / 300.0, 1))

@@ -471,9 +471,31 @@ class NaraRecommender:
             carb_carbs = 0.0
             
             if not has_carb:
-                # Pair with a BPS-aligned regional carbohydrate staple!
-                east_provinces = ['papua', 'maluku', 'papua barat', 'papua selatan', 'papua tengah', 'papua pegunungan', 'maluku utara', 'nusa tenggara timur']
-                if prov_display.strip().lower() in east_provinces:
+                # Pair with a BPS-aligned regional carbohydrate staple dynamically!
+                prov_key = prov_display.strip().lower()
+                prov_consumption = self.consumption_map.get(prov_key, {})
+                if not prov_consumption and self.consumption_map:
+                    # Fallback to national
+                    prov_consumption = self.consumption_map.get("nasional", {})
+                
+                # Fetch consumption rates (kg/capita/year)
+                beras_rate = max(1.0, prov_consumption.get("beras", 80.0))
+                ubi_rate = prov_consumption.get("ubi jalar", 0.0)
+                singkong_rate = prov_consumption.get("singkong", 0.0)
+                sagu_rate = prov_consumption.get("sagu", 0.0)
+                
+                # Calculate relative ratio compared to rice
+                ubi_ratio = ubi_rate / beras_rate
+                singkong_ratio = singkong_rate / beras_rate
+                sagu_ratio = sagu_rate / beras_rate
+                
+                if ubi_ratio >= 0.20:
+                    carb_name = "Ubi Jalar Rebus (150g)"
+                    carb_cal = 114.0
+                    carb_prot = 2.0
+                    carb_fat = 0.2
+                    carb_carbs = 27.0
+                elif singkong_ratio >= 0.15 or sagu_ratio >= 0.10:
                     carb_name = "Singkong Rebus (150g)"
                     carb_cal = 160.0
                     carb_prot = 1.5
