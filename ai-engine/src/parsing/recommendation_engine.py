@@ -553,6 +553,8 @@ class NaraRecommender:
                 
             res = {
                 "title": r["title"],
+                "ingredients": r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "",
+                "instructions": r["instructions"] if "instructions" in r and pd.notna(r["instructions"]) else "",
                 "score": round(r["recommendation_score"] * 100, 1),
                 "food_category": cat,
                 "portion_scale_factor": scale_factor,
