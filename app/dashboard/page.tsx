@@ -6,15 +6,14 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
 import { supabase } from '@/utils/supabase';
 
 export default function Dashboard() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0); 
-  const [mealPool, setMealPool] = useState<any[]>([]);
   const [weeklyPlanIndices, setWeeklyPlanIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
@@ -23,46 +22,27 @@ export default function Dashboard() {
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  const fetchLatestPlan = async () => {
+  // FETCH ON-DEMAND LOGIC
+  const fetchNewRecommendation = async () => {
     setIsLoading(true);
     setError(null);
-    
-    // We need either email or userId to find the plan
-    const identifier = store.email || store.userId;
-    if (!identifier) {
-      console.log("No user identification found in store.");
-      setIsLoading(false);
-      return;
-    }
 
     try {
-      // 1. Get user profile ID from Supabase
-      const { data: profile, error: profError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .or(`email.eq."${store.email}",id.eq."${store.userId}"`)
-        .single();
+      // 1. Trigger the AI Bridge
+      const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(store)
+      });
 
-      if (profError || !profile) {
-        console.warn("User profile not found in database.");
-        setIsLoading(false);
-        return;
-      }
+      if (!response.ok) throw new Error("AI Recommendation failed");
+      const result = await response.json();
 
-      // 2. Fetch the MOST RECENT meal plan
-      const { data: plan, error: planError } = await supabase
-        .from('meal_plans')
-        .select('*')
-        .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (plan && plan.plan_data && Array.isArray(plan.plan_data)) {
-        // AI Success: Populate the meal pool
-        const realPool = plan.plan_data.map((item: any, i: number) => ({
+      // 2. Persist Locally (Sync with Zustand)
+      if (result.top_20_recipes) {
+        const normalizedPool: Recipe[] = result.top_20_recipes.map((item: any, i: number) => ({
           id: item.id || item.recipe_id || `recipe_${i}`,
-          title: item.title || item.recipe_name || 'NARA Specialty',
+          title: item.title || item.recipe_name || 'NARA Selection',
           image: item.image || `https://images.unsplash.com/photo-${[
               '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
             ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
@@ -74,29 +54,30 @@ export default function Dashboard() {
           ingredients: item.ingredients || []
         }));
         
-        setMealPool(realPool);
-      } else {
-        console.log("No plan_data found for user.");
-        setMealPool([]);
+        store.setMealPlan(normalizedPool);
       }
     } catch (err) {
-      console.error("Dashboard Sync Error:", err);
-      setError("Failed to sync with NARA database.");
+      console.error("Manual Sync Error:", err);
+      setError("AI Engine is currently unreachable.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initial Fetch on Load
+  // On Load: If no local meal plan exists, fetch one.
   useEffect(() => {
-    fetchLatestPlan();
-  }, [store.email, store.userId, store.isOnboarded]);
+    if (!store.mealPlan && store.isOnboarded) {
+       fetchNewRecommendation();
+    }
+  }, [store.mealPlan, store.isOnboarded]);
 
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
+  // Strictly use the Local persistence (mealPlan) as default
+  const mealPool = store.mealPlan || [];
   const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex % mealPool.length] : null;
 
   const chartData = currentMeal ? [
@@ -120,16 +101,10 @@ export default function Dashboard() {
     return (
       <div className="app-content bg-nara-light flex flex-col items-center justify-center">
          <div className="relative w-20 h-20 mb-6">
-            <motion.div 
-              animate={{ rotate: 360 }} 
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 rounded-full border-4 border-nara-hunter/10 border-t-nara-hunter" 
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-               <span className="text-nara-hunter font-black text-xl">N</span>
-            </div>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-nara-hunter/10 border-t-nara-hunter" />
+            <div className="absolute inset-0 flex items-center justify-center"><span className="text-nara-hunter font-black text-xl">N</span></div>
          </div>
-         <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.3em] animate-pulse">Sensing Bio-Data...</p>
+         <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.3em] animate-pulse">On-Demand Calibration...</p>
       </div>
     );
   }
@@ -144,10 +119,7 @@ export default function Dashboard() {
            </p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
-        <button 
-          onClick={fetchLatestPlan}
-          className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter"
-        >
+        <button onClick={fetchNewRecommendation} className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter">
            <RefreshCw size={20} />
         </button>
       </header>
@@ -156,49 +128,28 @@ export default function Dashboard() {
         {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
           {days.map((day, idx) => (
-            <button
-              key={day}
-              onClick={() => setSelectedDayIndex(idx)}
-              className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-[28px] transition-all duration-300 border ${
-                selectedDayIndex === idx 
-                ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' 
-                : 'bg-white/50 text-nara-muted border-white/80'
-              }`}
-            >
+            <button key={day} onClick={() => setSelectedDayIndex(idx)} className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-[28px] transition-all duration-300 border ${selectedDayIndex === idx ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' : 'bg-white/50 text-nara-muted border-white/80'}`}>
               <span className="text-[9px] font-black uppercase tracking-widest opacity-60">{day.substring(0, 3)}</span>
               <span className="text-lg font-black">{idx + 1}</span>
             </button>
           ))}
         </div>
 
-        {/* Featured Meal Card */}
+        {/* Local Recommendation Card */}
         {currentMeal ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between px-1">
-                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Utensils size={14} /> AI Recommendation
-                </h2>
-                <button 
-                  onClick={() => setIsSwapModalOpen(true)}
-                  className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all"
-                >
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Utensils size={14} /> AI Recommendation</h2>
+                <button onClick={() => setIsSwapModalOpen(true)} className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all">
                   <RefreshCw size={12} /> Swap Menu
                 </button>
             </div>
 
-            <motion.div 
-              key={`${currentMeal.id}-${selectedDayIndex}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer group"
-            >
+            <motion.div key={`${currentMeal.id}-${selectedDayIndex}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer group">
                 <Image src={currentMeal.image} alt={currentMeal.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" priority unoptimized />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
                 <div className="absolute top-6 left-6 flex gap-2">
-                  <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
-                    {currentMeal.calories} KCAL
-                  </div>
+                  <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">{currentMeal.calories} KCAL</div>
                 </div>
                 <div className="absolute bottom-10 left-8 right-8 text-left">
                   <p className="text-nara-emerald font-black text-[10px] uppercase tracking-[0.3em] mb-2">Target Calibration</p>
@@ -218,13 +169,12 @@ export default function Dashboard() {
              </div>
              <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Initialize Analysis</h3>
              <p className="text-[11px] text-nara-muted leading-relaxed max-w-[220px] font-bold uppercase tracking-wider">Your personal bio-signature hasn&apos;t been processed by the NARA engine yet.</p>
-             <Link href="/onboarding" className="btn-primary mt-8 py-4 px-10 shadow-lg">Start Calibrating</Link>
+             <button onClick={fetchNewRecommendation} className="btn-primary mt-8 py-4 px-10 shadow-lg">Run On-Demand Sync</button>
           </div>
         )}
 
         {currentMeal && (
           <div className="space-y-6" ref={detailRef}>
-            {/* Macro Chart */}
             <div className="glass-container p-8 grid grid-cols-2 gap-4 shadow-xl">
                <div className="flex flex-col justify-center">
                   <h3 className="text-[11px] font-black text-nara-text mb-4 uppercase tracking-widest opacity-60">Macro Distribution</h3>
@@ -255,7 +205,6 @@ export default function Dashboard() {
                </div>
             </div>
 
-            {/* Reasoning Card */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-7 rounded-[40px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-float relative overflow-hidden">
                <div className="flex items-center gap-2 mb-3">
                   <ShieldCheck size={18} className="text-nara-emerald" />
@@ -264,7 +213,6 @@ export default function Dashboard() {
                <p className="text-white/80 text-[14px] leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </motion.div>
 
-            {/* Ingredients */}
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
@@ -287,16 +235,12 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* SWAP MODAL */}
       <AnimatePresence>
         {isSwapModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 backdrop-blur-md">
              <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="w-full max-w-md h-[80vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                   <div>
-                      <h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool</h2>
-                      <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Matched Recommendations</p>
-                   </div>
+                   <div><h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool</h2><p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Matched Recommendations</p></div>
                    <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"><X size={20} /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
@@ -304,13 +248,8 @@ export default function Dashboard() {
                       const isActive = (weeklyPlanIndices[selectedDayIndex] % mealPool.length) === idx;
                       return (
                         <button key={meal.id} onClick={() => handleSwapRecipe(idx)} className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${isActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100 shadow-sm'}`}>
-                           <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0 border border-slate-50">
-                              <Image src={meal.image} alt={meal.title} fill className="object-cover" unoptimized />
-                           </div>
-                           <div className="flex-1 text-left">
-                              <h4 className="font-bold text-nara-text text-sm leading-tight">{meal.title}</h4>
-                              <p className="text-[10px] text-slate-400 font-bold mt-1">{meal.calories} KCAL • {meal.protein}g Protein</p>
-                           </div>
+                           <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0 border border-slate-50"><Image src={meal.image} alt={meal.title} fill className="object-cover" unoptimized /></div>
+                           <div className="flex-1 text-left"><h4 className="font-bold text-nara-text text-sm leading-tight">{meal.title}</h4><p className="text-[10px] text-slate-400 font-bold mt-1">{meal.calories} KCAL • {meal.protein}g Protein</p></div>
                            {isActive ? <div className="w-8 h-8 rounded-full bg-nara-hunter flex items-center justify-center text-white shadow-soft"><Check size={16} /></div> : <RefreshCw size={16} className="text-slate-200" />}
                         </button>
                       );
@@ -322,14 +261,8 @@ export default function Dashboard() {
       </AnimatePresence>
 
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-center gap-12 px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
-         <Link href="/dashboard" className="nav-hitbox text-nara-hunter max-w-[80px]">
-            <Target size={24} fill="currentColor" />
-            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>
-         </Link>
-         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors max-w-[80px]">
-            <User size={24} />
-            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span>
-         </Link>
+         <Link href="/dashboard" className="nav-hitbox text-nara-hunter max-w-[80px]"><Target size={24} fill="currentColor" /><span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span></Link>
+         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors max-w-[80px]"><User size={24} /><span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span></Link>
       </nav>
     </div>
   );

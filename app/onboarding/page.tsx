@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart, MapPin, ChevronDown, Check } from 'lucide-react';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMI, getBmiStatus } from '@/utils/nutrition';
 import { supabase } from '@/utils/supabase';
 
@@ -25,7 +25,6 @@ export default function Onboarding() {
   const [isProvModalOpen, setIsProvModalOpen] = useState(false);
   const router = useRouter();
 
-  // Connect to Zustand Store
   const store = useUserStore();
 
   const activityLevels = [
@@ -44,15 +43,15 @@ export default function Onboarding() {
   ];
 
   const bmi = calculateBMI(store.weight, store.height);
-  const isAtRisk = bmi < 17.0 && bmi > 0;
   const bmiStatus = getBmiStatus(bmi);
+  const isAtRisk = bmi < 17.0 && bmi > 0;
 
   const handleGeneratePlan = async () => {
     setStep(5);
     setIsGenerating(true);
 
     try {
-      // 1. SAVE TO SUPABASE
+      // 1. Save Profile to Supabase (Persistence)
       await supabase.from('user_profiles').upsert({
         email: store.email,
         full_name: store.fullName,
@@ -66,22 +65,41 @@ export default function Onboarding() {
         dietary_goal: store.goal
       });
 
-      // 2. CALL AI ENGINE
+      // 2. FETCH RECOMMENDATION (ON-DEMAND)
       const response = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(store)
       });
 
-      if (response.ok) {
-        store.completeOnboarding();
-        router.push('/dashboard');
-      } else {
-         throw new Error("AI Recommendation failed");
+      if (!response.ok) throw new Error("AI Recommendation failed");
+      const result = await response.json();
+
+      // 3. PERSIST MEAL PLAN LOCALLY (Requirement: Save to LocalStorage via Zustand)
+      if (result.top_20_recipes) {
+        const normalizedPool: Recipe[] = result.top_20_recipes.map((item: any, i: number) => ({
+          id: item.id || item.recipe_id || `recipe_${i}`,
+          title: item.title || item.recipe_name || 'NARA Selection',
+          image: item.image || `https://images.unsplash.com/photo-${[
+              '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
+            ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
+          calories: Math.round(item.calories || item.energy || 400),
+          protein: Math.round(item.protein || 25),
+          carbs: Math.round(item.carbs || item.carbohydrate || 45),
+          fat: Math.round(item.fat || 12),
+          scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
+          ingredients: item.ingredients || []
+        }));
+        
+        store.setMealPlan(normalizedPool);
       }
+
+      store.completeOnboarding();
+      router.push('/dashboard');
+
     } catch (err) {
       console.error(err);
-      alert("Note: AI Engine is currently offline. Proceeding with Safety Fallback logic.");
+      alert("Note: AI Engine is currently offline. Proceeding with safety fallback.");
       store.completeOnboarding();
       router.push('/dashboard');
     } finally {
@@ -282,33 +300,17 @@ export default function Onboarding() {
       <AnimatePresence>
         {isProvModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 backdrop-blur-sm">
-             <motion.div 
-               initial={{ y: '100%' }}
-               animate={{ y: 0 }}
-               exit={{ y: '100%' }}
-               className="w-full max-w-md h-[70vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl"
-             >
+             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="w-full max-w-md h-[70vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl">
                 <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                    <div>
                       <h2 className="text-xl font-black text-nara-text">Indonesian Region</h2>
                       <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Calibrating Local Recipes</p>
                    </div>
-                   <button 
-                     onClick={() => setIsProvModalOpen(false)}
-                     className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"
-                   >
-                      <X className="w-5 h-5" />
-                   </button>
+                   <button onClick={() => setIsProvModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"><X size={20} /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-2 no-scrollbar">
                    {INDONESIAN_PROVINCES.map(p => (
-                     <button 
-                       key={p} 
-                       onClick={() => { store.setBiometrics({ location: p }); setIsProvModalOpen(false); }}
-                       className={`w-full p-5 rounded-[28px] text-left flex items-center justify-between transition-all active:scale-[0.98] ${
-                         store.location === p ? 'bg-nara-hunter text-white shadow-float' : 'hover:bg-slate-50 text-nara-text font-bold'
-                       }`}
-                     >
+                     <button key={p} onClick={() => { store.setBiometrics({ location: p }); setIsProvModalOpen(false); }} className={`w-full p-5 rounded-[28px] text-left flex items-center justify-between transition-all active:scale-[0.98] ${store.location === p ? 'bg-nara-hunter text-white shadow-float' : 'hover:bg-slate-50 text-nara-text font-bold'}`}>
                         <span className="text-sm tracking-tight">{p}</span>
                         {store.location === p && <Check size={18} />}
                      </button>
