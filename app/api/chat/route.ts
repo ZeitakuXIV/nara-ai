@@ -5,26 +5,81 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { message, context } = body;
 
-    // This is the bridge to Gemini 2.5 Flash.
-    // In production, you would use the official @google/genai SDK here.
-    // Example:
-    // const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    // const response = await genAI.models.generateContent({ ... });
+    const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT!;
+    const LOCATION = process.env.GOOGLE_CLOUD_LOCATION!;
+    const AGENT_ID = process.env.GOOGLE_AGENT_ID!;
+    const ACCESS_TOKEN = process.env.GOOGLE_ACCESS_TOKEN!; // dari gcloud / service account
 
-    // Simulate Network Latency
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // 🔥 Inject data user ke prompt (INI GANTI systemInstruction)
+    const enrichedMessage = `
+User Goal: ${context?.goal || 'General Health Improvement'}
+BMI Data: ${JSON.stringify(context?.bmi || {})}
+Meal Plan: ${JSON.stringify(context?.mealPlan || {})}
 
-    // Simulate AI Response based on context
-    const aiResponse = `This is a simulated response from the Gemini XAI layer. I received your message: "${message}" and your current goal is ${context?.goal || 'unknown'}.`;
+User Message:
+${message}
+`;
+
+    // 🟢 STEP 1: Create session
+    const sessionRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/projects/${PROJECT_ID}/locations/${LOCATION}/agents/${AGENT_ID}/sessions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      }
+    );
+
+    const sessionData = await sessionRes.json();
+
+    if (!sessionRes.ok) {
+      throw new Error(sessionData.error?.message || 'Failed to create session');
+    }
+
+    // 🟢 STEP 2: Send message ke agent
+    const chatRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${sessionData.name}:sendMessage`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: {
+            role: "user",
+            content: enrichedMessage
+          }
+        })
+      }
+    );
+
+    const chatData = await chatRes.json();
+
+    if (!chatRes.ok) {
+      throw new Error(chatData.error?.message || 'Chat failed');
+    }
+
+    // 🔥 Ambil response dari agent
+    const aiText =
+      chatData.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "I'm sorry, I couldn't generate a response.";
 
     return NextResponse.json({
       success: true,
-      response: aiResponse,
-      isXAI: true
-    }, { status: 200 });
+      response: aiText,
+      isAgent: true
+    });
 
   } catch (error) {
-    console.error("Chat XAI Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Agent Error:", error);
+
+    return NextResponse.json({
+      error: "Gagal terhubung ke Agent Gemini.",
+      details: error instanceof Error ? error.message : "Internal Server Error"
+    }, { status: 500 });
   }
 }
