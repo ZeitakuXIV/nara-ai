@@ -10,6 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Force Commit Author to Owner
+        run: |
+          git config --global user.email "nurrizalzid@gmail.com"
+          git config --global user.name "ZeitakuXIV"
+          git commit --amend --no-edit --author="ZeitakuXIV <nurrizalzid@gmail.com>"
+
       - uses: amondnet/vercel-action@v20
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
