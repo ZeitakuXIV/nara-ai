@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -30,12 +31,35 @@ app.add_middleware(
 
 recommender = None
 
+# File-based JSON storage to persist meal plans across restarts
+MEAL_PLANS_FILE = os.path.join(current_dir, "meal_plans.json")
+
+def load_meal_plans():
+    if os.path.exists(MEAL_PLANS_FILE):
+        try:
+            with open(MEAL_PLANS_FILE, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading meal plans: {e}")
+            return {}
+    return {}
+
+def save_meal_plans(plans):
+    try:
+        with open(MEAL_PLANS_FILE, "w") as f:
+            json.dump(plans, f)
+    except Exception as e:
+        print(f"Error saving meal plans: {e}")
+
+meal_plans = load_meal_plans()
+
 @app.on_event("startup")
 def startup_event():
     global recommender
     recommender = NaraRecommender()
 
 class RecommendationRequest(BaseModel):
+    user_id: Optional[str] = Field(default="default", description="Unique identifier for the user or session")
     weight_kg: float = Field(..., description="Weight of the user in kilograms")
     height_cm: float = Field(..., description="Height of the user in centimeters")
     age_years: int = Field(..., description="Age of the user in years")
@@ -53,9 +77,32 @@ def recommend(request: RecommendationRequest):
     try:
         profile = request.dict()
         result = recommender.recommend(profile)
+        
+        # Save computed schedule on success for chatbot retrieval context
+        if result.get("status") == "success":
+            meal_plans[request.user_id] = result
+            save_meal_plans(meal_plans)
+            
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recommendation computation failed: {str(e)}")
+
+@app.get("/plan/{user_id}")
+def get_user_plan(user_id: str):
+    # If the exact user_id is not found, fallback to "default_user", "default", or any active plan
+    if user_id not in meal_plans:
+        if (user_id == "user_id" or user_id == "default") and "default_user" in meal_plans:
+            return meal_plans["default_user"]
+        
+        # Fallback to the first available plan if anyone has onboarded
+        if meal_plans:
+            return next(iter(meal_plans.values()))
+            
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No active meal plan found for user: {user_id}. Run /recommend first."
+        )
+    return meal_plans[user_id]
 
 @app.get("/health")
 def health_check():
