@@ -14,8 +14,7 @@
     "vercel-install": "pnpm install --no-frozen-lockfile"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.49.1",
+    "@supabase/supabase-js": "^2.107.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.16.0",
     "next": "14.2.35",

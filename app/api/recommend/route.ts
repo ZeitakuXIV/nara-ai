@@ -119,13 +119,19 @@ export async function POST(req: NextRequest) {
          dietary_goal: body.goal
        });
 
+       // Save the generated meal plan (Top 20 / 15 combined)
+       // We find the user_id first
        const { data: user } = await supabase.from('user_profiles').select('id').eq('email', body.email).single();
        
        if (user) {
+         const mealPool = result.primary_schedule && result.alternative_pool
+           ? [...result.primary_schedule, ...result.alternative_pool]
+           : (result.top_20_recipes || []);
+
          await supabase.from('meal_plans').insert({
            user_id: user.id,
-           target_calories: result.target_calories || 0,
-           plan_data: result.top_20_recipes
+           target_calories: result.targets?.calories || result.target_calories || 0,
+           plan_data: mealPool // Storing the combined list for dashboard and later "swapping"
          });
        }
     }

@@ -1,0 +1,27 @@
+meta {
+  name: Generate Meal Plan (POST)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/plan
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "user_id": "default_user",
+    "biometrics": {
+      "gender": "male",
+      "age": 28,
+      "height": 175,
+      "weight": 70,
+      "activity": "moderate",
+      "location": "Jawa Barat",
+      "allergies": ["dairy allergy"],
+      "goal": "maintenance"
+    }
+  }
+}
