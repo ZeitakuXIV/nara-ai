@@ -3,8 +3,6 @@ import os
 import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import List, Optional
 from dotenv import load_dotenv
 
 # Add source directory to sys.path so relative imports in scripts work
@@ -25,6 +23,7 @@ if "GOOGLE_CLOUD_PROJECT" in os.environ:
 
 from src.parsing.recommendation_engine import NaraRecommender
 from src.nara_agent import root_agent
+from src.schemas import RecommendationRequest, ChatRequest
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
@@ -79,7 +78,7 @@ async def startup_event():
     # Initialize ADK Runner and Session Service
     session_service = InMemorySessionService()
     
-    # Pre-create a global session to avoid "Session Not Found" errors in the runner thread
+    # Pre-create a default session
     await session_service.create_session(
         user_id="default_user", 
         session_id="default_session", 
@@ -91,22 +90,6 @@ async def startup_event():
         session_service=session_service,
         app_name="nara_ai"
     )
-
-class RecommendationRequest(BaseModel):
-    user_id: Optional[str] = Field(default="default", description="Unique identifier for the user or session")
-    weight_kg: float = Field(..., description="Weight of the user in kilograms")
-    height_cm: float = Field(..., description="Height of the user in centimeters")
-    age_years: int = Field(..., description="Age of the user in years")
-    sex: str = Field(..., description="Sex of the user: 'male' or 'female'")
-    activity_level: str = Field(..., description="Activity level: 'sedentary', 'light', 'moderate', 'very_active', etc.")
-    goal: str = Field(..., description="Goal: 'weight_loss', 'muscle_gain', 'maintenance', etc.")
-    province: str = Field(..., description="Province of the user (Indonesian province name)")
-    allergies: Optional[List[str]] = Field(default_factory=list)
-    clinical_conditions: Optional[List[str]] = Field(default_factory=list)
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., description="The user message to NARA")
-    context: Optional[dict] = Field(default=None, description="Optional user context (BMI, goals, etc.)")
 
 @app.post("/recommend")
 def recommend(request: RecommendationRequest):
@@ -129,7 +112,7 @@ async def fetch_user_meal_plan(email: str):
     """
     Mock function to simulate fetching a meal plan from Supabase or another service.
     In a real scenario, this would use a database client or call another API.
-    (work in progress)
+    (work in progress / fallback)
     """
     if not email:
         return None
@@ -150,20 +133,25 @@ async def chat(request: ChatRequest):
     if agent_runner is None:
         raise HTTPException(status_code=503, detail="Agent runner is not initialized yet.")
     try:
-        # 1. Fetch User Meal Plan for Context
-        user_email = request.context.get("email") if request.context else None
-        meal_plan = await fetch_user_meal_plan(user_email)
+        # 1. Fetch User Meal Plan for Context (Try real meal plan from context first, otherwise fallback to mock)
+        meal_plan = None
+        if request.context:
+            meal_plan = request.context.get("mealPlan")
+            
+        if not meal_plan:
+            user_email = request.context.get("email") if request.context else None
+            meal_plan = await fetch_user_meal_plan(user_email)
         
         # 2. Enrich the message with Context & Meal Plan (Pre-prompting)
         user_message = request.message
         context_parts = []
         
         if request.context:
-            context_str = "\n".join([f"{k}: {v}" for k, v in request.context.items() if k != "email"])
-            context_parts.append(f"USER BIOMETRICS:\n{context_str}")
+            context_str = "\n".join([f"{k}: {v}" for k, v in request.context.items() if k not in ["email", "mealPlan"]])
+            if context_str:
+                context_parts.append(f"USER BIOMETRICS:\n{context_str}")
         
         if meal_plan:
-            import json
             meal_plan_str = json.dumps(meal_plan, indent=2)
             context_parts.append(f"CURRENT 1-WEEK MEAL PLAN:\n{meal_plan_str}")
         
@@ -173,16 +161,16 @@ async def chat(request: ChatRequest):
         
         print(f"--- NARA CHAT REQUEST ---\nMessage: {user_message}\n------------------------")
         
-        # Consistent identifiers
+        # Consistent identifiers using dynamic user_id
         APP_NAME = "nara_ai"
-        user_id = "default_user"
-        session_id = "default_session"
+        user_id = request.user_id or "default_user"
+        session_id = f"session_{user_id}"
 
         # Ensure session exists in the service
-        try:
-            await session_service.get_session(user_id=user_id, session_id=session_id, app_name=APP_NAME)
-        except Exception:
-            print(f"Creating session: {session_id}")
+        # Ensure session exists in the service
+        session = await session_service.get_session(user_id=user_id, session_id=session_id, app_name=APP_NAME)
+        if not session:
+            print(f"Creating session for user {user_id}: {session_id}")
             await session_service.create_session(user_id=user_id, session_id=session_id, app_name=APP_NAME)
         
         # Prepare content object
@@ -192,7 +180,6 @@ async def chat(request: ChatRequest):
         )
         
         # Run the agent
-        # We pass the same IDs we just ensured exist in the session_service
         events = agent_runner.run(
             user_id=user_id,
             session_id=session_id,
@@ -228,3 +215,4 @@ async def chat(request: ChatRequest):
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "engine_ready": recommender is not None}
+
