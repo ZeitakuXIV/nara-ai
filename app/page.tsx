@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { supabase } from '@/utils/supabase';
 
 export default function AppEntry() {
   const [isLogin, setIsLogin] = useState(false);
@@ -22,11 +23,25 @@ export default function AppEntry() {
     if (!isFormValid) return;
     
     setIsLoading(true);
-    // Simulate real auth delay (will be replaced by supabase.auth in next step)
+    // Simulate real auth delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsLoading(false);
     
     router.push('/onboarding');
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/onboarding`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      alert(error.message || "Failed to connect to Google");
+    }
   };
 
   return (
@@ -131,7 +146,10 @@ export default function AppEntry() {
             </div>
 
             <div className="mt-6">
-               <button className="btn-secondary w-full py-4 font-bold text-[16px] flex items-center justify-center gap-3 active:scale-95 transition-all">
+               <button 
+                onClick={handleGoogleLogin}
+                className="btn-secondary w-full py-4 font-bold text-[16px] flex items-center justify-center gap-3 active:scale-95 transition-all"
+               >
                  <svg width="20" height="20" viewBox="0 0 48 48">
                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                     <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.45-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
