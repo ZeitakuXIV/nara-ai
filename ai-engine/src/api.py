@@ -81,7 +81,7 @@ async def startup_event():
     # Persistent SQLite session storage — survives request cycles within a deployment
     # Note: Railway has ephemeral filesystem, so sessions reset on full redeploy.
     # For cross-deployment persistence, swap db_url to a PostgreSQL connection string.
-    session_service = DatabaseSessionService(db_url="sqlite+aiosqlite:///./nara_sessions.db")
+    session_service = DatabaseSessionService(db_url="sqlite+aiosqlite:////tmp/nara_sessions.db")
     
     agent_runner = Runner(
         agent=root_agent,
