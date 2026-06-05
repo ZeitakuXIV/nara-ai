@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { execFile } from 'child_process';
-import path from 'path';
+// Python Microservice configuration
+const PYTHON_MICROSERVICE_URL = process.env.PYTHON_MICROSERVICE_URL || 'http://127.0.0.1:8000';
 
 // Enforce dynamic execution for real-time recommendations
 export const dynamic = 'force-dynamic';
@@ -26,48 +26,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Resolve Paths
-    const workspaceRoot = process.cwd();
-    const scriptPath = path.join(
-      workspaceRoot,
-      'ai-engine',
-      'src',
-      'parsing',
-      'recommendation_engine.py'
-    );
-    const profileJsonString = JSON.stringify(body);
+    // 2. Forward request to Python Recommendation Microservice
+    const response = await fetch(`${PYTHON_MICROSERVICE_URL}/recommend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-    // 3. Spawn Python Subprocess Securely
-    // We execute python3 directly and pass arguments as an array to prevent shell injection.
-    const runRecommender = (): Promise<any> => {
-      return new Promise((resolve, reject) => {
-        execFile(
-          'python3',
-          [scriptPath, '--profile', profileJsonString],
-          { maxBuffer: 1024 * 1024 * 10, cwd: path.join(workspaceRoot, 'ai-engine') }, // 10MB buffer limit
-          (error, stdout, stderr) => {
-            if (error) {
-              reject({ error, stderr });
-              return;
-            }
-            try {
-              const cleanStdout = stdout.trim();
-              const jsonStart = cleanStdout.indexOf('{');
-              if (jsonStart === -1) {
-                reject({ error: new Error('No JSON output found from Python engine'), stdout, stderr });
-                return;
-              }
-              const parsed = JSON.parse(cleanStdout.substring(jsonStart));
-              resolve(parsed);
-            } catch (jsonErr) {
-              reject({ error: jsonErr, stdout, stderr });
-            }
-          }
-        );
-      });
-    };
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Python Recommendation microservice returned error status ${response.status}: ${errorText}`);
+    }
 
-    const result = await runRecommender();
+    const result = await response.json();
 
     // 4. Clinical Safety Trigger Check
     if (result.status === 'safety_cutoff_triggered') {
