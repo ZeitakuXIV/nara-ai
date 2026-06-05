@@ -11,9 +11,21 @@ import {
   MapPin, 
   Save, 
   RotateCcw,
-  Target
+  Target,
+  ChevronDown
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
+
+const INDONESIAN_PROVINCES = [
+  "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", 
+  "Gorontalo", "Jambi", "Jawa Barat", "Jawa Tengah", "Jawa Timur", 
+  "Kalimantan Barat", "Kalimantan Selatan", "Kalimantan Tengah", "Kalimantan Timur", "Kalimantan Utara", 
+  "Kepulauan Bangka Belitung", "Kepulauan Riau", "Lampung", "Maluku", "Maluku Utara", 
+  "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Papua", "Papua Barat", "Papua Barat Daya", 
+  "Papua Pegunungan", "Papua Selatan", "Papua Tengah", "Riau", "Sulawesi Barat", 
+  "Sulawesi Selatan", "Sulawesi Tengah", "Sulawesi Tenggara", "Sulawesi Utara", 
+  "Sumatera Barat", "Sumatera Selatan", "Sumatera Utara"
+];
 
 export default function Profile() {
   const store = useUserStore();
@@ -32,8 +44,8 @@ export default function Profile() {
         <div className="flex items-center gap-4">
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Health Identity</h1>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-nara-hunter flex items-center justify-center text-white font-black shadow-soft">
-           VA
+        <div className="w-12 h-12 rounded-2xl bg-nara-hunter flex items-center justify-center text-white font-black shadow-soft uppercase">
+           {store.fullName ? store.fullName.substring(0, 2) : 'NA'}
         </div>
       </header>
 
@@ -45,7 +57,7 @@ export default function Profile() {
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Bio-Status Index</span>
               <div className="flex items-baseline gap-2">
                  <span className="text-5xl font-black text-nara-text tracking-tighter">{bmi}</span>
-                 <span className="text-[10px] font-black text-nara-emerald bg-nara-emerald/10 px-3 py-1 rounded-full uppercase tracking-widest">Optimal</span>
+                 <span className="text-[10px] font-black text-nara-emerald bg-nara-emerald/10 px-3 py-1 rounded-full uppercase tracking-widest">Verified</span>
               </div>
            </div>
            <div className="w-20 h-20 rounded-full border-[6px] border-nara-emerald/20 flex items-center justify-center relative">
@@ -79,26 +91,37 @@ export default function Profile() {
                  </div>
               </div>
               
-              <div className="glass-card p-6 flex items-center justify-between gap-4">
-                 <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl bg-nara-hunter/10 flex items-center justify-center text-nara-hunter shrink-0"><AgeIcon size={24} /></div>
-                    <div className="min-w-0">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Age</span>
-                       <input type="number" value={store.age} onChange={(e) => store.setBiometrics({ age: Number(e.target.value) })} className="w-full bg-transparent text-xl font-black text-nara-text focus:outline-none" />
+              <div className="glass-card p-6 flex flex-col gap-6">
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                       <div className="w-12 h-12 rounded-2xl bg-nara-hunter/10 flex items-center justify-center text-nara-hunter shrink-0"><AgeIcon size={24} /></div>
+                       <div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Age</span>
+                          <input type="number" value={store.age} onChange={(e) => store.setBiometrics({ age: Number(e.target.value) })} className="w-full bg-transparent text-xl font-black text-nara-text focus:outline-none" />
+                       </div>
                     </div>
                  </div>
-                 <div className="h-12 w-[1px] bg-slate-100 shrink-0" />
-                 <div className="flex items-center gap-4 flex-1 justify-end text-right min-w-0">
-                    <div className="min-w-0">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Region</span>
-                       <input 
-                         type="text" 
+                 
+                 <div className="h-[1px] w-full bg-slate-100" />
+
+                 <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-nara-muted opacity-60">
+                       <MapPin size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Current Province</span>
+                    </div>
+                    <div className="relative">
+                       <select 
                          value={store.location} 
                          onChange={(e) => store.setBiometrics({ location: e.target.value })} 
-                         className="w-full bg-transparent text-sm font-bold text-nara-text text-right focus:outline-none truncate" 
-                       />
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 text-sm font-bold text-nara-text appearance-none focus:outline-none focus:ring-2 focus:ring-nara-hunter/20 transition-all"
+                       >
+                         {INDONESIAN_PROVINCES.map(p => (
+                           <option key={p} value={p}>{p}</option>
+                         ))}
+                       </select>
+                       <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown size={18} />
+                       </div>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-nara-emerald/10 flex items-center justify-center text-nara-emerald shrink-0"><MapPin size={24} /></div>
                  </div>
               </div>
            </div>
