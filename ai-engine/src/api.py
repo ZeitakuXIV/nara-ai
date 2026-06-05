@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError:
     from schemas import RecommendationRequest, ChatRequest
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions import DatabaseSessionService
 from google.genai import types
 import asyncio
 
@@ -78,15 +78,10 @@ async def startup_event():
     global recommender, agent_runner, session_service
     recommender = NaraRecommender()
     
-    # Initialize ADK Runner and Session Service
-    session_service = InMemorySessionService()
-    
-    # Pre-create a default session
-    await session_service.create_session(
-        user_id="default_user", 
-        session_id="default_session", 
-        app_name="nara_ai"
-    )
+    # Persistent SQLite session storage — survives request cycles within a deployment
+    # Note: Railway has ephemeral filesystem, so sessions reset on full redeploy.
+    # For cross-deployment persistence, swap db_url to a PostgreSQL connection string.
+    session_service = DatabaseSessionService(db_url="sqlite+aiosqlite:////tmp/nara_sessions.db")
     
     agent_runner = Runner(
         agent=root_agent,
@@ -111,52 +106,48 @@ def recommend(request: RecommendationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recommendation computation failed: {str(e)}")
 
-async def fetch_user_meal_plan(email: str):
+def format_meal_plan_for_agent(meal_plan) -> str:
     """
-    Mock function to simulate fetching a meal plan from Supabase or another service.
-    In a real scenario, this would use a database client or call another API.
-    (work in progress / fallback)
+    Formats the meal plan (list of Recipe dicts from Supabase/Zustand)
+    into a clean readable list for the agent's context window.
+    No biometric data is included — ethical decision.
     """
-    if not email:
-        return None
+    if not meal_plan:
+        return ""
     
-    # Simulating a fetched meal plan structure
-    return {
-        "monday": ["Oatmeal with Bananas", "Grilled Chicken Breast", "Tempeh Stir Fry"],
-        "tuesday": ["Boiled Eggs & Spinach", "Beef Rendang (Low Fat)", "Greek Yogurt"],
-        "wednesday": ["Smoothie Bowl", "Gado-Gado", "Steamed Fish"],
-        "thursday": ["Avocado Toast", "Soto Ayam", "Stir-fried Broccoli"],
-        "friday": ["Omelette", "Pepes Ikan", "Tahu Goreng Air-fryer"],
-        "saturday": ["Pancakes (Protein)", "Ayam Bakar Taliwang", "Fruit Salad"],
-        "sunday": ["Scrambled Eggs", "Rawon", "Nasi Merah with Stir-fry"]
-    }
+    if isinstance(meal_plan, list):
+        lines = []
+        for i, recipe in enumerate(meal_plan[:20]):  # Cap at 20 recipes to avoid token bloat
+            if isinstance(recipe, dict):
+                name = recipe.get("title") or recipe.get("name") or "Unknown Recipe"
+                cals = recipe.get("calories", "?")
+                lines.append(f"  {i+1}. {name} (~{cals} kcal)")
+            elif isinstance(recipe, str):
+                lines.append(f"  {i+1}. {recipe}")
+        return "\n".join(lines) if lines else ""
+    
+    # Fallback: already a string or dict with days
+    return json.dumps(meal_plan, ensure_ascii=False)
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
     if agent_runner is None:
         raise HTTPException(status_code=503, detail="Agent runner is not initialized yet.")
     try:
-        # 1. Fetch User Meal Plan for Context (Try real meal plan from context first, otherwise fallback to mock)
+        # 1. Get meal plan from context (fetched from Supabase by Next.js route, or client-side fallback)
+        # No biometric data is injected — ethical decision to keep personal health data off the agent
         meal_plan = None
         if request.context:
             meal_plan = request.context.get("mealPlan")
-            
-        if not meal_plan:
-            user_email = request.context.get("email") if request.context else None
-            meal_plan = await fetch_user_meal_plan(user_email)
         
-        # 2. Enrich the message with Context & Meal Plan (Pre-prompting)
+        # 2. Build pre-prompt context with ONLY meal plan (no biometrics)
         user_message = request.message
         context_parts = []
         
-        if request.context:
-            context_str = "\n".join([f"{k}: {v}" for k, v in request.context.items() if k not in ["email", "mealPlan"]])
-            if context_str:
-                context_parts.append(f"USER BIOMETRICS:\n{context_str}")
-        
         if meal_plan:
-            meal_plan_str = json.dumps(meal_plan, indent=2)
-            context_parts.append(f"CURRENT 1-WEEK MEAL PLAN:\n{meal_plan_str}")
+            meal_plan_str = format_meal_plan_for_agent(meal_plan)
+            if meal_plan_str:
+                context_parts.append(f"MEAL PLAN CURRENTLY ASSIGNED TO THIS USER:\n{meal_plan_str}")
         
         if context_parts:
             full_context = "\n\n".join(context_parts)

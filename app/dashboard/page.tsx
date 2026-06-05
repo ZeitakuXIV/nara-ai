@@ -44,7 +44,22 @@ export default function Dashboard() {
         body: JSON.stringify(store)
       });
 
-      if (!response.ok) throw new Error("AI Recommendation failed");
+      if (!response.ok) {
+        if (response.status === 403) {
+          const safetyData = await response.json();
+          if (safetyData.status === 'safety_shield') {
+            setError(JSON.stringify({
+              type: 'safety_shield',
+              message: safetyData.message,
+              recommendation: safetyData.recommendation,
+              details: safetyData.details
+            }));
+            setIsLoading(false);
+            return;
+          }
+        }
+        throw new Error("AI Recommendation failed");
+      }
       const result = await response.json();
 
       // 2. Persist Locally (Sync with Zustand)
@@ -151,7 +166,43 @@ export default function Dashboard() {
         </div>
 
         {/* Local Recommendation Card */}
-        {currentMeal ? (
+        {error ? (
+          (() => {
+            try {
+              const parsedError = JSON.parse(error);
+              if (parsedError.type === 'safety_shield') {
+                return (
+                  <div className="glass-container p-8 flex flex-col items-center justify-center text-center border-rose-500/30 bg-rose-500/5 shadow-xl relative overflow-hidden">
+                     <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500">
+                        <ShieldCheck size={32} />
+                     </div>
+                     <h3 className="text-xl font-black text-rose-600 tracking-tight mb-2">NARA Safety Shield Active</h3>
+                     <p className="text-[12px] text-rose-700/80 font-bold leading-relaxed mb-4">{parsedError.message}</p>
+                     <div className="bg-white/80 border border-rose-100 rounded-3xl p-5 mb-6 text-left max-w-sm mx-auto">
+                        <span className="text-[8px] font-black uppercase text-rose-500 tracking-[0.2em] block mb-2">Clinical Assessment</span>
+                        <p className="text-[11px] text-slate-600 leading-relaxed font-bold mb-3">{parsedError.recommendation}</p>
+                        <span className="text-[8px] font-black uppercase text-slate-400 tracking-[0.2em] block mb-2">Medical Disclaimer</span>
+                        <p className="text-[11px] text-slate-500 leading-relaxed italic">{parsedError.details}</p>
+                     </div>
+                     <p className="text-[10px] text-slate-400 font-bold mb-6">Please update your profile target goals or biometrics to safety standards.</p>
+                     <Link href="/profile" className="btn-primary w-full py-4 text-center justify-center">Update Health Identity</Link>
+                  </div>
+                );
+              }
+            } catch (e) {}
+
+            return (
+              <div className="glass-container p-8 flex flex-col items-center justify-center text-center border-rose-200/40 bg-white/20">
+                 <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500">
+                    <AlertCircle size={32} />
+                 </div>
+                 <h3 className="text-lg font-black text-nara-text tracking-tight mb-2">Sync Interrupted</h3>
+                 <p className="text-[11px] text-nara-muted font-bold uppercase tracking-wider mb-6">{error}</p>
+                 <button onClick={fetchNewRecommendation} className="btn-primary py-4 px-10 shadow-lg">Retry Connection</button>
+              </div>
+            );
+          })()
+        ) : currentMeal ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between px-1">
                 <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Utensils size={14} /> AI Recommendation</h2>

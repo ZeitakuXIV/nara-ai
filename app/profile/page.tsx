@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { 
@@ -12,9 +13,12 @@ import {
   Save, 
   RotateCcw,
   Target,
-  ChevronDown
+  ChevronDown,
+  Loader2,
+  Download
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
+import { supabase } from '@/utils/supabase';
 
 const INDONESIAN_PROVINCES = [
   "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", 
@@ -29,12 +33,72 @@ const INDONESIAN_PROVINCES = [
 
 export default function Profile() {
   const store = useUserStore();
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleDownloadData = () => {
+    // UU PDP No. 27/2022 Art. 5 Compliance: User data portability right
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+      app: "NARA AI",
+      law_compliance: "UU PDP No. 27/2022 Art. 5 (Right to Data Portability)",
+      exported_at: new Date().toISOString(),
+      user_profile: {
+        userId: store.userId,
+        email: store.email,
+        fullName: store.fullName,
+        gender: store.gender,
+        age: store.age,
+        height_cm: store.height,
+        weight_kg: store.weight,
+        activity_level: store.activity,
+        location_province: store.location,
+        allergies: store.allergies,
+        dietary_goal: store.goal
+      },
+      meal_plan: store.mealPlan
+    }, null, 2));
+    
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `nara_ai_user_data.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
 
   const bmi = useMemo(() => {
     const heightInMeters = store.height / 100;
     if (!heightInMeters) return 0;
     return parseFloat((store.weight / (heightInMeters * heightInMeters)).toFixed(1));
   }, [store.height, store.weight]);
+
+  const handleDeployChanges = async () => {
+    setIsSaving(true);
+    try {
+      // 1. Persist updated biometrics to Supabase
+      if (store.userId) {
+        await supabase.from('user_profiles').update({
+          weight: store.weight,
+          height: store.height,
+          age: store.age,
+          location: store.location,
+        }).eq('id', store.userId);
+      }
+
+      // 2. Clear cached meal plan so dashboard triggers a fresh AI recommendation
+      store.clearMealPlan();
+
+      // 3. Navigate to dashboard — it will detect mealPlan === null and re-fetch
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Failed to save profile changes:', err);
+      // Navigate anyway — worst case the old plan is still shown
+      store.clearMealPlan();
+      router.push('/dashboard');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="app-content bg-nara-light">
@@ -128,8 +192,16 @@ export default function Profile() {
         </section>
 
         <div className="flex flex-col gap-4 pt-6">
-           <Link href="/dashboard" className="btn-primary py-5 shadow-xl"><Save size={20} /> Deploy Changes</Link>
-           <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
+           <button
+             onClick={handleDeployChanges}
+             disabled={isSaving}
+             className="btn-primary py-5 shadow-xl disabled:opacity-60"
+           >
+             {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+             {isSaving ? 'Saving...' : 'Deploy Changes'}
+           </button>
+           <button onClick={handleDownloadData} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><Download size={16} /> Download My Data (UU PDP)</button>
+           <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-rose-500 font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
         </div>
       </main>
 
