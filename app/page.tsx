@@ -3,21 +3,36 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 
 export default function AppEntry() {
   const [isLogin, setIsLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleAuthAction = () => {
+  // Basic validation
+  const isFormValid = isLogin 
+    ? email.includes('@') && password.length >= 6 
+    : fullName.length > 2 && email.includes('@') && password.length >= 6;
+
+  const handleAuthAction = async () => {
+    if (!isFormValid) return;
+    
+    setIsLoading(true);
+    // Simulate real auth delay (will be replaced by supabase.auth in next step)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsLoading(false);
+    
     router.push('/onboarding');
   };
 
   return (
     <div className="flex-1 flex flex-col relative justify-center">
-      {/* Background is now handled by layout.tsx */}
-
-      {/* Identity Section - Perfectly Centered */}
+      
+      {/* Identity Section */}
       <div className="flex-1 flex flex-col justify-center items-center px-8 z-10 w-full">
         <motion.div 
           initial={{ y: -30, opacity: 0 }}
@@ -25,7 +40,7 @@ export default function AppEntry() {
           className="flex flex-col items-center mb-10"
         >
           <div className="w-24 h-24 bg-gradient-to-br from-nara-hunter to-nara-evergreen rounded-[32px] shadow-float flex items-center justify-center mb-6">
-             <span className="text-white font-black text-4xl">N</span>
+             <span className="text-white font-black text-4xl tracking-tighter drop-shadow-md">N</span>
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-nara-text mb-2 text-glow">N.A.R.A</h1>
           <div className="flex items-center gap-1.5 text-nara-emerald font-bold text-[10px] uppercase tracking-[0.2em] bg-nara-emerald/10 px-3 py-1 rounded-full border border-nara-emerald/20">
@@ -42,30 +57,68 @@ export default function AppEntry() {
           <div className="glass-container p-8 relative overflow-hidden shadow-2xl">
             <AnimatePresence mode="wait">
               {isLogin ? (
-                <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-5">
+                <motion.div key="login" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex flex-col gap-5">
                   <div className="text-center">
                     <h2 className="text-2xl font-bold text-nara-text tracking-tight">Welcome back</h2>
                   </div>
                   <div className="space-y-3">
-                    <input type="email" placeholder="Email address" className="app-input" />
-                    <input type="password" placeholder="Password" className="app-input" />
+                    <input 
+                      type="email" 
+                      placeholder="Email address" 
+                      className="app-input" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Password" 
+                      className="app-input" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                   </div>
-                  <button onClick={handleAuthAction} className="btn-primary mt-2">
-                    Sign In <ArrowRight size={18} />
+                  <button 
+                    onClick={handleAuthAction} 
+                    disabled={!isFormValid || isLoading}
+                    className={`btn-primary mt-2 transition-all ${(!isFormValid || isLoading) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                  >
+                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <>Sign In <ArrowRight size={18} /></>}
                   </button>
                 </motion.div>
               ) : (
-                <motion.div key="reg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-5">
+                <motion.div key="reg" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="flex flex-col gap-5">
                   <div className="text-center">
                     <h2 className="text-2xl font-bold text-nara-text tracking-tight">Create Account</h2>
                   </div>
                   <div className="space-y-3">
-                    <input type="text" placeholder="Full name" className="app-input" />
-                    <input type="email" placeholder="Email address" className="app-input" />
-                    <input type="password" placeholder="Create password" className="app-input" />
+                    <input 
+                      type="text" 
+                      placeholder="Full name" 
+                      className="app-input" 
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                    <input 
+                      type="email" 
+                      placeholder="Email address" 
+                      className="app-input" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Create password" 
+                      className="app-input" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                   </div>
-                  <button onClick={handleAuthAction} className="btn-primary mt-2">
-                    Get Started <ArrowRight size={18} />
+                  <button 
+                    onClick={handleAuthAction} 
+                    disabled={!isFormValid || isLoading}
+                    className={`btn-primary mt-2 transition-all ${(!isFormValid || isLoading) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                  >
+                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <>Get Started <ArrowRight size={18} /></>}
                   </button>
                 </motion.div>
               )}
@@ -77,9 +130,8 @@ export default function AppEntry() {
               <div className="flex-1 h-[1px] bg-slate-200/60"></div>
             </div>
 
-            {/* Google Login */}
             <div className="mt-6">
-               <button className="btn-secondary w-full py-4 font-bold text-[16px] flex items-center justify-center gap-3">
+               <button className="btn-secondary w-full py-4 font-bold text-[16px] flex items-center justify-center gap-3 active:scale-95 transition-all">
                  <svg width="20" height="20" viewBox="0 0 48 48">
                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                     <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.45-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
