@@ -30,12 +30,16 @@ app.add_middleware(
 
 recommender = None
 
+# Stateful in-memory dictionary to store computed meal plans
+meal_plans = {}
+
 @app.on_event("startup")
 def startup_event():
     global recommender
     recommender = NaraRecommender()
 
 class RecommendationRequest(BaseModel):
+    user_id: Optional[str] = Field(default="default", description="Unique identifier for the user or session")
     weight_kg: float = Field(..., description="Weight of the user in kilograms")
     height_cm: float = Field(..., description="Height of the user in centimeters")
     age_years: int = Field(..., description="Age of the user in years")
@@ -52,10 +56,25 @@ def recommend(request: RecommendationRequest):
         raise HTTPException(status_code=503, detail="Recommendation engine is not initialized yet.")
     try:
         profile = request.dict()
+        # Exclude user_id before calling the recommender engine if needed, or pass it directly
         result = recommender.recommend(profile)
+        
+        # Save computed schedule on success for chatbot retrieval context
+        if result.get("status") == "success":
+            meal_plans[request.user_id] = result
+            
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recommendation computation failed: {str(e)}")
+
+@app.get("/plan/{user_id}")
+def get_user_plan(user_id: str):
+    if user_id not in meal_plans:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No active meal plan found for user: {user_id}. Run /recommend first."
+        )
+    return meal_plans[user_id]
 
 @app.get("/health")
 def health_check():
