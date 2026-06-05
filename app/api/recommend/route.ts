@@ -6,6 +6,26 @@ const PYTHON_MICROSERVICE_URL = process.env.PYTHON_MICROSERVICE_URL || 'http://1
 
 export const dynamic = 'force-dynamic';
 
+// Parser to split comma-separated ingredients into name and quantity objects
+const parseIngredients = (ingredientsStr: string): Array<{ name: string; qty: string }> => {
+  if (!ingredientsStr) return [];
+  return ingredientsStr.split(',').map(part => {
+    const trimmed = part.trim();
+    // Match something like "1 butir", "250 gr", "2 siung", "1/2 sdt", "0.5 kg" etc.
+    const match = trimmed.match(/^(\d+(?:\/\d+)?(?:\.\d+)?\s*(?:kg|gr|g|siung|butir|sdm|sdt|ml|liter|bungkus|lembar|piring|gelas|biji|ruas|tangkai|buah)?)\s+(.+)$/i);
+    if (match) {
+      return {
+        qty: match[1].trim(),
+        name: match[2].trim()
+      };
+    }
+    return {
+      qty: 'Secukupnya',
+      name: trimmed
+    };
+  });
+};
+
 // Fallback Mock Data Generator (In case Python server is offline / ECONNREFUSED)
 const generateMockRecommendations = (goal: string) => {
   const recipes = [
@@ -94,13 +114,47 @@ export async function POST(req: NextRequest) {
       result = generateMockRecommendations(body.goal);
     }
 
+    // NORMALIZE SUCCESSFUL PYTHON ENGINE RESPONSE FOR FRONTEND
+    if (result && result.status === 'success' && (result.primary_schedule || result.alternative_pool)) {
+      const primary = result.primary_schedule || [];
+      const alternatives = result.alternative_pool || [];
+      const combined = [...primary, ...alternatives];
+      
+      const mappedRecipes = combined.map((item: any, i: number) => {
+        const scaling_reason = item.explanations && item.explanations.length > 0
+          ? item.explanations.join(' ')
+          : 'Calibrated based on your province and biometrics.';
+          
+        return {
+          id: item.id || `recipe_${i}_${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+          title: item.title,
+          image: item.image || `https://images.unsplash.com/photo-${[
+              '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
+            ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
+          calories: Math.round(item.calories_per_serving || 400),
+          protein: Math.round(item.protein_per_serving || 25),
+          carbs: Math.round(item.carbs_per_serving || 45),
+          fat: Math.round(item.fat_per_serving || 12),
+          scaling_reason: scaling_reason,
+          ingredients: parseIngredients(item.ingredients)
+        };
+      });
+      
+      result = {
+        status: 'success',
+        is_mock: false,
+        target_calories: result.targets?.caloric_target_meal ? Math.round(result.targets.caloric_target_meal * 3) : 2000,
+        top_20_recipes: mappedRecipes
+      };
+    }
+
     // HANDLE SAFETY CUTOFF
     if (result.status === 'safety_cutoff_triggered') {
       return NextResponse.json({
         status: 'safety_shield',
         message: 'NARA Safety Shield Triggered: Based on your biometrics, the current goal may be medically unsafe.',
-        recommendation: 'Maintenance mode enforced.',
-        details: result.reason
+        recommendation: result.clinical_condition_triggered || 'Maintenance mode enforced.',
+        details: result.medical_disclaimer_id || result.medical_disclaimer_en || 'Consult a clinical dietitian.'
       }, { status: 403 });
     }
 
