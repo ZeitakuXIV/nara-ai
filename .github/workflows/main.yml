@@ -16,7 +16,3 @@ jobs:
           vercel-org-id: ${{ secrets.ORG_ID }}
           vercel-project-id: ${{ secrets.PROJECT_ID }}
           vercel-args: '--prod'
-
-      - name: Trigger Development
-        run: |
-          curl -f "${{ secrets.APP_URL }}/api/cron/sync-modules?secret=${{ secrets.CRON_SECRET }}" || true
