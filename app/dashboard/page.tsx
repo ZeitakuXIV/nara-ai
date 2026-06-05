@@ -4,17 +4,18 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2 } from 'lucide-react';
+import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useUserStore } from '@/store/userStore';
 import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
 import { supabase } from '@/utils/supabase';
 
 export default function Dashboard() {
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // 0 (Mon) to 6 (Sun)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0); 
   const [mealPool, setMealPool] = useState<any[]>([]);
   const [weeklyPlanIndices, setWeeklyPlanIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
@@ -22,74 +23,80 @@ export default function Dashboard() {
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // Load real data from Supabase
-  useEffect(() => {
-    const fetchLatestPlan = async () => {
-      // Prioritize userId if available, fallback to email
-      const identifier = store.userId || store.email;
-      if (!identifier) {
+  const fetchLatestPlan = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    // We need either email or userId to find the plan
+    const identifier = store.email || store.userId;
+    if (!identifier) {
+      console.log("No user identification found in store.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // 1. Get user profile ID from Supabase
+      const { data: profile, error: profError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .or(`email.eq."${store.email}",id.eq."${store.userId}"`)
+        .single();
+
+      if (profError || !profile) {
+        console.warn("User profile not found in database.");
         setIsLoading(false);
         return;
       }
 
-      try {
-        let userQuery;
-        if (store.userId) {
-          userQuery = supabase.from('user_profiles').select('id').eq('id', store.userId).single();
-        } else {
-          userQuery = supabase.from('user_profiles').select('id').eq('email', store.email).single();
-        }
+      // 2. Fetch the MOST RECENT meal plan
+      const { data: plan, error: planError } = await supabase
+        .from('meal_plans')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (plan && plan.plan_data && Array.isArray(plan.plan_data)) {
+        // AI Success: Populate the meal pool
+        const realPool = plan.plan_data.map((item: any, i: number) => ({
+          id: item.id || item.recipe_id || `recipe_${i}`,
+          title: item.title || item.recipe_name || 'NARA Specialty',
+          image: item.image || `https://images.unsplash.com/photo-${[
+              '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
+            ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
+          calories: Math.round(item.calories || item.energy || 400),
+          protein: Math.round(item.protein || 25),
+          carbs: Math.round(item.carbs || item.carbohydrate || 45),
+          fat: Math.round(item.fat || 12),
+          scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
+          ingredients: item.ingredients || []
+        }));
         
-        const { data: profile } = await userQuery;
-
-        if (!profile) {
-           setIsLoading(false);
-           return;
-        }
-
-        // Fetch latest meal plan for this specific user
-        const { data: plan, error } = await supabase
-          .from('meal_plans')
-          .select('*')
-          .eq('user_id', profile.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (plan && plan.plan_data && Array.isArray(plan.plan_data)) {
-          // Sync mealPool with REAL AI data
-          const realPool = plan.plan_data.map((item: any, i: number) => ({
-            id: item.id || `recipe_${i}`,
-            title: item.title || item.recipe_name || 'NARA Selection',
-            image: item.image || `https://images.unsplash.com/photo-${[
-                '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
-              ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
-            calories: item.calories || 0,
-            protein: item.protein || 0,
-            carbs: item.carbs || 0,
-            fat: item.fat || 0,
-            scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
-            ingredients: item.ingredients || []
-          }));
-          
-          setMealPool(realPool);
-        }
-      } catch (err) {
-        console.error("Dashboard Load Error:", err);
-      } finally {
-        setIsLoading(false);
+        setMealPool(realPool);
+      } else {
+        console.log("No plan_data found for user.");
+        setMealPool([]);
       }
-    };
+    } catch (err) {
+      console.error("Dashboard Sync Error:", err);
+      setError("Failed to sync with NARA database.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Initial Fetch on Load
+  useEffect(() => {
     fetchLatestPlan();
-  }, [store.email, store.userId]);
+  }, [store.email, store.userId, store.isOnboarded]);
 
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
-  // SAFETY: Check if index exists in the REAL pool
   const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex % mealPool.length] : null;
 
   const chartData = currentMeal ? [
@@ -112,8 +119,17 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="app-content bg-nara-light flex flex-col items-center justify-center">
-         <Loader2 className="text-nara-hunter animate-spin mb-4" size={40} />
-         <p className="text-sm font-black text-nara-hunter uppercase tracking-widest animate-pulse">Sensing Bio-Data...</p>
+         <div className="relative w-20 h-20 mb-6">
+            <motion.div 
+              animate={{ rotate: 360 }} 
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 rounded-full border-4 border-nara-hunter/10 border-t-nara-hunter" 
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+               <span className="text-nara-hunter font-black text-xl">N</span>
+            </div>
+         </div>
+         <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.3em] animate-pulse">Sensing Bio-Data...</p>
       </div>
     );
   }
@@ -124,13 +140,16 @@ export default function Dashboard() {
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.2em] mb-1 opacity-60">
-             Personal Goal: {store.goal || 'Calculating...'}
+             Target: {targetMacros.calories} KCAL/DAY
            </p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-95 transition-all">
-           <Calendar className="text-nara-hunter" size={20} />
-        </div>
+        <button 
+          onClick={fetchLatestPlan}
+          className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter"
+        >
+           <RefreshCw size={20} />
+        </button>
       </header>
 
       <main className="px-6 flex-1 z-10 space-y-8 pb-40">
@@ -152,12 +171,12 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Real AI Recommendation Card */}
+        {/* Featured Meal Card */}
         {currentMeal ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between px-1">
                 <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Utensils size={14} /> AI Expert Choice
+                  <Utensils size={14} /> AI Recommendation
                 </h2>
                 <button 
                   onClick={() => setIsSwapModalOpen(true)}
@@ -172,9 +191,9 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer active:scale-[0.99] transition-transform"
+              className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer group"
             >
-                <Image src={currentMeal.image} alt={currentMeal.title} fill className="object-cover" priority unoptimized />
+                <Image src={currentMeal.image} alt={currentMeal.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" priority unoptimized />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
                 <div className="absolute top-6 left-6 flex gap-2">
                   <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
@@ -194,15 +213,18 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="glass-container p-12 flex flex-col items-center justify-center text-center bg-white/20">
-             <Zap size={32} className="text-nara-hunter animate-pulse mb-6" />
-             <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">No Bio-Plan Found</h3>
-             <p className="text-xs text-nara-muted leading-relaxed max-w-[220px]">We couldn&apos;t find your signature plan. Let&apos;s calibrate your metrics now.</p>
-             <Link href="/onboarding" className="btn-primary mt-8 py-4 px-8">Sync with NARA</Link>
+             <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6">
+                <Zap size={32} className="text-nara-hunter animate-pulse" />
+             </div>
+             <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Initialize Analysis</h3>
+             <p className="text-[11px] text-nara-muted leading-relaxed max-w-[220px] font-bold uppercase tracking-wider">Your personal bio-signature hasn&apos;t been processed by the NARA engine yet.</p>
+             <Link href="/onboarding" className="btn-primary mt-8 py-4 px-10 shadow-lg">Start Calibrating</Link>
           </div>
         )}
 
         {currentMeal && (
           <div className="space-y-6" ref={detailRef}>
+            {/* Macro Chart */}
             <div className="glass-container p-8 grid grid-cols-2 gap-4 shadow-xl">
                <div className="flex flex-col justify-center">
                   <h3 className="text-[11px] font-black text-nara-text mb-4 uppercase tracking-widest opacity-60">Macro Distribution</h3>
@@ -233,6 +255,7 @@ export default function Dashboard() {
                </div>
             </div>
 
+            {/* Reasoning Card */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-7 rounded-[40px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-float relative overflow-hidden">
                <div className="flex items-center gap-2 mb-3">
                   <ShieldCheck size={18} className="text-nara-emerald" />
@@ -241,18 +264,22 @@ export default function Dashboard() {
                <p className="text-white/80 text-[14px] leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </motion.div>
 
+            {/* Ingredients */}
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
                   {currentMeal.ingredients && currentMeal.ingredients.length > 0 ? (
                     currentMeal.ingredients.map((ing: any, i: number) => (
                       <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
-                          <span className="text-sm font-bold text-nara-text">{ing.name}</span>
-                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount}</span>
+                          <span className="text-sm font-bold text-nara-text">{ing.name || ing.item}</span>
+                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount || 'Adjusted'}</span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-nara-muted italic text-center py-4">Ingredient breakdown currently being scaled...</p>
+                    <div className="py-6 text-center">
+                       <AlertCircle size={20} className="mx-auto text-slate-300 mb-2" />
+                       <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest">Ingredients being scaled by engine...</p>
+                    </div>
                   )}
                </div>
             </div>
@@ -268,13 +295,13 @@ export default function Dashboard() {
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
                    <div>
                       <h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool</h2>
-                      <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Top 20 Matched Recommendations</p>
+                      <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Matched Recommendations</p>
                    </div>
                    <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"><X size={20} /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
                    {mealPool.map((meal, idx) => {
-                      const isActive = weeklyPlanIndices[selectedDayIndex] === idx;
+                      const isActive = (weeklyPlanIndices[selectedDayIndex] % mealPool.length) === idx;
                       return (
                         <button key={meal.id} onClick={() => handleSwapRecipe(idx)} className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${isActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100 shadow-sm'}`}>
                            <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0 border border-slate-50">
