@@ -33,6 +33,7 @@ const normalizeAiResponse = (result: any) => {
     scaling_reason: Array.isArray(item.explanations) 
       ? item.explanations.join(' ') 
       : (item.scaling_reason || 'Calibrated based on your province and biometrics.'),
+    instructions: item.instructions || 'Cooking steps are currently being analyzed by the expert system.',
     ingredients: item.ingredients || [
       { name: 'Protein Source', qty: 'Scaled to target' },
       { name: 'Local Carbohydrate', qty: 'Standard portion' }

@@ -563,6 +563,9 @@ class NaraRecommender:
                 "density": density_val,
                 "regional_alignment_score": round(ras_val * 100, 1),
                 "source": r["source"],
+                "instructions": r["instructions"] if pd.notna(r["instructions"]) else "Steps being calculated...",
+                "ingredients_raw": r["ingredients"] if pd.notna(r["ingredients"]) else "",
+                "ingredients": ingredients,
                 "explanations": [
                     scale_reason,
                     macro_reason,

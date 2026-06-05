@@ -11,6 +11,7 @@ export interface Recipe {
   fat: number;
   scaling_reason: string;
   ingredients: Array<{ name: string; qty: string }>;
+  instructions: string;
 }
 
 export interface UserBiometrics {

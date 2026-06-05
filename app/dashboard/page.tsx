@@ -221,7 +221,7 @@ export default function Dashboard() {
                     currentMeal.ingredients.map((ing: any, i: number) => (
                       <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
                           <span className="text-sm font-bold text-nara-text">{ing.name || ing.item}</span>
-                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount || 'Adjusted'}</span>
+                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount || (ing.grams ? `${ing.grams}g` : 'Adjusted')}</span>
                       </div>
                     ))
                   ) : (
@@ -229,6 +229,20 @@ export default function Dashboard() {
                        <AlertCircle size={20} className="mx-auto text-slate-300 mb-2" />
                        <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest">Ingredients being scaled by engine...</p>
                     </div>
+                  )}
+               </div>
+            </div>
+
+            {/* PREPARATION STEPS */}
+            <div className="glass-container p-8 shadow-lg">
+               <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Preparation Steps</h3>
+               <div className="space-y-6">
+                  {currentMeal.instructions ? (
+                    <div className="text-sm leading-relaxed text-nara-text font-medium whitespace-pre-line">
+                       {currentMeal.instructions}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-nara-muted italic">Instruction data not provided by AI engine.</p>
                   )}
                </div>
             </div>
