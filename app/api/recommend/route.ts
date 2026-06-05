@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabase';
 
 // Python Microservice configuration
-const PYTHON_MICROSERVICE_URL = process.env.PYTHON_MICROSERVICE_URL || 'http://127.0.0.1:8000';
+const PYTHON_MICROSERVICE_URL =
+  process.env.PYTHON_MICROSERVICE_URL ||
+  process.env.NEXT_PUBLIC_AI_ENGINE_URL ||
+  'http://127.0.0.1:8000';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +64,7 @@ const mapActivity = (level: string) => {
     'sedentary': 'sedentary',
     'light': 'lightly_active',
     'moderate': 'moderately_active',
-    'extra': 'highly_active'
+    'extra': 'extra_active'
   };
   return mapping[level] || 'sedentary';
 };
@@ -102,14 +105,14 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pythonPayload),
-        signal: AbortSignal.timeout(5000) // 5s timeout
+        signal: AbortSignal.timeout(8000) // 8s timeout (optimal for Vercel Hobby serverless limits)
       });
 
-      if (!aiResponse.ok) throw new Error('AI Server Down');
+      if (!aiResponse.ok) throw new Error(`AI Server responded with status ${aiResponse.status}`);
       result = await aiResponse.json();
 
     } catch (fetchErr) {
-      console.warn("AI Engine unreachable (ECONNREFUSED). Using NARA Safety Fallback logic.");
+      console.warn("AI Engine connection failed. Using NARA Safety Fallback logic. Error:", fetchErr);
       // FALLBACK TO MOCK IF AI SERVER IS DOWN
       result = generateMockRecommendations(body.goal);
     }

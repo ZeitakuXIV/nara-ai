@@ -23,7 +23,10 @@ if "GOOGLE_CLOUD_PROJECT" in os.environ:
 
 from src.parsing.recommendation_engine import NaraRecommender
 from src.nara_agent import root_agent
-from src.schemas import RecommendationRequest, ChatRequest
+try:
+    from src.schemas import RecommendationRequest, ChatRequest
+except ModuleNotFoundError:
+    from schemas import RecommendationRequest, ChatRequest
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
