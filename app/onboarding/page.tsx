@@ -41,39 +41,36 @@ export default function Onboarding() {
 
     try {
       // 1. SAVE TO SUPABASE
-      const { error } = await supabase
-        .from('user_profiles')
-        .upsert({
-          email: store.email,
-          full_name: store.fullName,
-          gender: store.gender,
-          age: store.age,
-          height: store.height,
-          weight: store.weight,
-          activity_level: store.activity,
-          location: store.location,
-          allergies: store.allergies,
-          dietary_goal: store.goal
-        });
+      // Storing bio-profile first to ensure persistence
+      await supabase.from('user_profiles').upsert({
+        email: store.email,
+        full_name: store.fullName,
+        gender: store.gender,
+        age: store.age,
+        height: store.height,
+        weight: store.weight,
+        activity_level: store.activity,
+        location: store.location,
+        allergies: store.allergies,
+        dietary_goal: store.goal
+      });
 
-      if (error) throw error;
-
-      // 2. CALL AI ENGINE
-      const response = await fetch('/api/plan', {
+      // 2. CALL AI ENGINE (PRODUCTION ENDPOINT: /api/recommend)
+      const response = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ biometrics: store })
+        body: JSON.stringify(store)
       });
 
       if (response.ok) {
         store.completeOnboarding();
         router.push('/dashboard');
       } else {
-         throw new Error("API call failed");
+         throw new Error("AI Recommendation failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to save profile. NARA needs a stable connection.");
+      alert("Failed to synchronize with NARA Engine. Retrying...");
       setStep(4);
     } finally {
       setIsGenerating(false);
@@ -175,7 +172,6 @@ export default function Onboarding() {
             </motion.div>
           )}
 
-          {/* ... Step 2, 3, 4 unchanged ... */}
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 px-1 pb-10">
               <h1 className="text-2xl font-black text-nara-text tracking-tight">Daily Activity</h1>
@@ -198,8 +194,11 @@ export default function Onboarding() {
             <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
               <h1 className="text-2xl font-black text-nara-text tracking-tight">Constraints</h1>
               <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-[0.2em]">Region (Indonesia)</label>
-                 <input type="text" value={store.location} onChange={e => store.setBiometrics({ location: e.target.value })} placeholder="e.g. Jakarta Selatan" className="app-input py-5 font-bold" />
+                 <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Province (Indonesia)</label>
+                    <span className="text-[8px] font-bold text-nara-emerald bg-nara-emerald/10 px-2 py-0.5 rounded-full">Required for API</span>
+                 </div>
+                 <input type="text" value={store.location} onChange={e => store.setBiometrics({ location: e.target.value })} placeholder="e.g. Jawa Barat, DKI Jakarta..." className="app-input py-5 font-bold" />
               </div>
               <div className="space-y-4">
                  <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-[0.2em]">Common Allergies</label>
@@ -237,7 +236,7 @@ export default function Onboarding() {
                 })}
               </div>
               <button disabled={!store.goal || isGenerating} onClick={handleGeneratePlan} className="btn-primary py-5 mt-6">
-                {isGenerating ? 'Processing...' : 'Generate Plan'} <Zap size={20} fill="currentColor" />
+                {isGenerating ? 'Syncing...' : 'Generate Plan'} <Zap size={20} fill="currentColor" />
               </button>
             </motion.div>
           )}

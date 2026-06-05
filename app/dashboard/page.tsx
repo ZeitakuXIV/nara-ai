@@ -128,7 +128,8 @@ export default function Dashboard() {
              key={currentMeal.id}
              initial={{ opacity: 0, y: 20 }}
              animate={{ opacity: 1, y: 0 }}
-             className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white"
+             onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+             className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer active:scale-[0.98] transition-all"
            >
               <Image 
                 src={currentMeal.image} 
