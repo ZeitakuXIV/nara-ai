@@ -77,10 +77,19 @@ export default function Dashboard() {
 
   const handleMealClick = (index: number) => {
     setActiveMealIndex(index);
-    // Smooth scroll to the analysis section below
-    setTimeout(() => {
-      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    // Ultra-smooth scroll to the analysis section
+    if (detailRef.current) {
+      const offset = 100; // Adjust for some breathing room
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = detailRef.current.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
   };
 
   return (
