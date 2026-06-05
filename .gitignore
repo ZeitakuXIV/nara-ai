@@ -34,3 +34,6 @@ ai-engine/datasets/retention/*.pdf
 # Keep Master Datasets (Cleaned)
 !ai-engine/datasets/master/
 .vercel
+
+# Security
+secrets/
