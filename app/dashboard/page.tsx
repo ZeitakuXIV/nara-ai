@@ -4,46 +4,17 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check } from 'lucide-react';
+import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useUserStore } from '@/store/userStore';
 import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
-
-// Simulation of the "Top 20" results from the Python AI Engine
-const MOCK_TOP_20_RECIPES = Array.from({ length: 20 }).map((_, i) => ({
-  id: `recipe_${i + 1}`,
-  title: [
-    'Nasi Tim Ayam Kampung', 'Pepes Ikan Kembung', 'Gado-Gado Siram', 
-    'Soto Ayam Lamongan', 'Ikan Bakar Cianjur', 'Tahu Tempe Bacem', 
-    'Sayur Asem Jakarta', 'Rendang Daging Sapi', 'Sate Ayam Madura', 
-    'Gulai Daun Singkong', 'Ayam Goreng Kalasan', 'Pepes Tahu Jamur',
-    'Capcay Kuah Kental', 'Opor Ayam Putih', 'Semur Jengkol',
-    'Ikan Goreng Nila', 'Sambal Goreng Kentang', 'Urap Sayur Segar',
-    'Oseng Kacang Panjang', 'Rawon Daging Surabaya'
-  ][i % 20],
-  image: `https://images.unsplash.com/photo-${[
-    '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd',
-    '1547592166-23ac45744acd', '1467003909585-2f8a72700288'
-  ][i % 5]}?q=80&w=800&auto=format&fit=crop`,
-  calories: 300 + (i * 15),
-  protein: 20 + (i % 5),
-  carbs: 40 + (i % 3),
-  fat: 10 + (i % 4),
-  scaling_reason: `Expert System selected this based on your activity level and regional preference. Post-cooking retention accounted for.`,
-  ingredients: [
-    { name: 'Main Protein', qty: '150g' },
-    { name: 'Local Veggies', qty: '100g' },
-    { name: 'Spices', qty: '10g' }
-  ]
-}));
+import { supabase } from '@/utils/supabase';
 
 export default function Dashboard() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0); // 0 (Mon) to 6 (Sun)
-  const [mealPool, setMealPool] = useState(MOCK_TOP_20_RECIPES);
-  
-  // Weekly Plan stores the index of the recipe from the pool for each day
-  // Default: Day 1 -> Recipe 0, Day 2 -> Recipe 1, ... Day 7 -> Recipe 6
-  const [weeklyPlanIndices, setWeeklyPlanIndices] = useState([0, 1, 2, 3, 4, 5, 6]);
+  const [mealPool, setMealPool] = useState<any[]>([]);
+  const [weeklyPlanIndices, setWeeklyPlanIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
@@ -51,12 +22,70 @@ export default function Dashboard() {
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+  // Load real data from Supabase
+  useEffect(() => {
+    const fetchLatestPlan = async () => {
+      if (!store.email) return;
+
+      try {
+        // 1. Get user profile
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('email', store.email)
+          .single();
+
+        if (!profile) return;
+
+        // 2. Get latest meal plan
+        const { data: plan, error } = await supabase
+          .from('meal_plans')
+          .select('*')
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (plan && plan.plan_data) {
+          // Normalize plan_data to ensure it has all needed fields for UI
+          const normalizedPool = plan.plan_data.map((item: any, i: number) => ({
+            id: item.id || `recipe_${i}`,
+            title: item.title || item.recipe_name || 'NARA Specialty',
+            image: item.image || `https://images.unsplash.com/photo-${[
+                '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
+              ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
+            calories: item.calories || 400,
+            protein: item.protein || 25,
+            carbs: item.carbs || 45,
+            fat: item.fat || 12,
+            scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
+            ingredients: item.ingredients || [
+              { name: 'Protein Source', qty: '150g' },
+              { name: 'Carbohydrate', qty: '100g' }
+            ]
+          }));
+          
+          setMealPool(normalizedPool);
+        } else {
+           // Fallback to trigger recommendation if none exists (Cold Start)
+           console.log("No plan found, please complete onboarding.");
+        }
+      } catch (err) {
+        console.error("Dashboard Load Error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLatestPlan();
+  }, [store.email]);
+
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
-  const currentMeal = mealPool[currentMealIndex];
+  const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex] : null;
 
   const chartData = currentMeal ? [
     { name: 'Protein', value: currentMeal.protein, color: '#3D644D' },
@@ -75,6 +104,15 @@ export default function Dashboard() {
       detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
   };
+
+  if (isLoading) {
+    return (
+      <div className="app-content bg-nara-light flex flex-col items-center justify-center">
+         <Loader2 className="text-nara-hunter animate-spin mb-4" size={40} />
+         <p className="text-sm font-black text-nara-hunter uppercase tracking-widest">Sensing Bio-Data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-content bg-nara-light">
@@ -110,67 +148,57 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Featured Meal Card (One Menu per Day) */}
-        <div className="space-y-5">
-           <div className="flex items-center justify-between px-1">
-              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Utensils size={14} /> Today&apos;s Recommendation
-              </h2>
-              <button 
-                onClick={() => setIsSwapModalOpen(true)}
-                className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all"
-              >
-                 <RefreshCw size={12} /> Explore Other Options
-              </button>
-           </div>
+        {/* Featured Meal Card */}
+        {currentMeal ? (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between px-1">
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Utensils size={14} /> Today&apos;s Recommendation
+                </h2>
+                <button 
+                  onClick={() => setIsSwapModalOpen(true)}
+                  className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all"
+                >
+                  <RefreshCw size={12} /> Swap Menu
+                </button>
+            </div>
 
-           <motion.div 
-             key={currentMeal.id}
-             initial={{ opacity: 0, y: 20 }}
-             animate={{ opacity: 1, y: 0 }}
-             onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-             className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer active:scale-[0.98] transition-all"
-           >
-              <Image 
-                src={currentMeal.image} 
-                alt={currentMeal.title} 
-                fill 
-                className="object-cover" 
-                priority 
-                unoptimized 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-              
-              <div className="absolute top-6 left-6 flex gap-2">
-                 <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
-                   {currentMeal.calories} KCAL
-                 </div>
-              </div>
+            <motion.div 
+              key={`${currentMeal.id}-${selectedDayIndex}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer"
+            >
+                <Image src={currentMeal.image} alt={currentMeal.title} fill className="object-cover" priority unoptimized />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                <div className="absolute top-6 left-6 flex gap-2">
+                  <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
+                    {currentMeal.calories} KCAL
+                  </div>
+                </div>
+                <div className="absolute bottom-10 left-8 right-8 text-left">
+                  <p className="text-nara-emerald font-black text-[10px] uppercase tracking-[0.3em] mb-2">Expert Selection</p>
+                  <h3 className="text-white text-3xl font-black leading-tight mb-4 tracking-tight">{currentMeal.title}</h3>
+                  <div className="flex gap-4 opacity-80">
+                      <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">P</span><span className="text-white text-xs font-black">{currentMeal.protein}g</span></div>
+                      <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">C</span><span className="text-white text-xs font-black">{currentMeal.carbs}g</span></div>
+                      <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">F</span><span className="text-white text-xs font-black">{currentMeal.fat}g</span></div>
+                  </div>
+                </div>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="glass-container p-12 flex flex-col items-center justify-center text-center bg-white/20">
+             <Zap size={32} className="text-nara-hunter animate-pulse mb-6" />
+             <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Awaiting Analysis</h3>
+             <p className="text-sm text-nara-muted leading-relaxed">Complete onboarding to generate your personalized NARA plan.</p>
+             <Link href="/onboarding" className="btn-primary mt-8 py-4">Start Onboarding</Link>
+          </div>
+        )}
 
-              <div className="absolute bottom-10 left-8 right-8 text-left">
-                 <p className="text-nara-emerald font-black text-[10px] uppercase tracking-[0.3em] mb-2">Expert Selection</p>
-                 <h3 className="text-white text-3xl font-black leading-tight mb-4 tracking-tight">{currentMeal.title}</h3>
-                 
-                 <div className="flex gap-4">
-                    <div className="flex flex-col">
-                       <span className="text-white/40 text-[8px] font-bold uppercase">Protein</span>
-                       <span className="text-white text-xs font-black">{currentMeal.protein}g</span>
-                    </div>
-                    <div className="flex flex-col">
-                       <span className="text-white/40 text-[8px] font-bold uppercase">Carbs</span>
-                       <span className="text-white text-xs font-black">{currentMeal.carbs}g</span>
-                    </div>
-                    <div className="flex flex-col">
-                       <span className="text-white/40 text-[8px] font-bold uppercase">Fat</span>
-                       <span className="text-white text-xs font-black">{currentMeal.fat}g</span>
-                    </div>
-                 </div>
-              </div>
-           </motion.div>
-        </div>
-
-        {/* Detailed Analysis Section */}
-        <div className="space-y-6" ref={detailRef}>
+        {currentMeal && (
+          <div className="space-y-6" ref={detailRef}>
             <div className="glass-container p-8 grid grid-cols-2 gap-4 shadow-xl">
                <div className="flex flex-col justify-center">
                   <h3 className="text-[11px] font-black text-nara-text mb-4 uppercase tracking-widest opacity-60">Macro Distribution</h3>
@@ -189,14 +217,7 @@ export default function Dashboard() {
                <div className="h-32 w-full relative flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
-                        <Pie 
-                          data={chartData} 
-                          innerRadius={40} 
-                          outerRadius={55} 
-                          paddingAngle={5} 
-                          dataKey="value"
-                          isAnimationActive={true}
-                        >
+                        <Pie data={chartData} innerRadius={40} outerRadius={55} paddingAngle={5} dataKey="value" isAnimationActive={true}>
                            {chartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
                         </Pie>
                      </PieChart>
@@ -213,54 +234,38 @@ export default function Dashboard() {
                   <ShieldCheck size={18} className="text-nara-emerald" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-nara-emerald">Expert Reasoning Insight</span>
                </div>
-               <p className="text-white/80 text-[14px] leading-relaxed italic">
-                 &quot;{currentMeal.scaling_reason}&quot;
-               </p>
+               <p className="text-white/80 text-[14px] leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </motion.div>
 
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
-                  {currentMeal.ingredients.map((ing, i) => (
+                  {currentMeal.ingredients.map((ing: any, i: number) => (
                      <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
                         <span className="text-sm font-bold text-nara-text">{ing.name}</span>
-                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty}</span>
+                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount}</span>
                      </div>
                   ))}
                </div>
             </div>
-        </div>
+          </div>
+        )}
       </main>
 
-      {/* SWAP MODAL (Top 20 Pool) */}
+      {/* SWAP MODAL */}
       <AnimatePresence>
         {isSwapModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 backdrop-blur-md">
-             <motion.div 
-               initial={{ y: '100%' }}
-               animate={{ y: 0 }}
-               exit={{ y: '100%' }}
-               className="w-full max-w-md h-[80vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl"
-             >
+             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="w-full max-w-md h-[80vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                   <h2 className="text-xl font-black text-nara-text tracking-tight">Explore Top 20 Recommendations</h2>
-                   <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                      <X size={20} />
-                   </button>
+                   <h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool (Top 20)</h2>
+                   <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90"><X size={20} /></button>
                 </div>
-                
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
-                   <p className="text-xs text-nara-muted font-bold uppercase tracking-widest px-1">AI-Engine Suitability Pool</p>
                    {mealPool.map((meal, idx) => {
-                      const isCurrentlyActive = weeklyPlanIndices[selectedDayIndex] === idx;
+                      const isActive = weeklyPlanIndices[selectedDayIndex] === idx;
                       return (
-                        <button 
-                          key={meal.id} 
-                          onClick={() => handleSwapRecipe(idx)}
-                          className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${
-                            isCurrentlyActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100'
-                          }`}
-                        >
+                        <button key={meal.id} onClick={() => handleSwapRecipe(idx)} className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${isActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100'}`}>
                            <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0">
                               <Image src={meal.image} alt={meal.title} fill className="object-cover" unoptimized />
                            </div>
@@ -268,11 +273,7 @@ export default function Dashboard() {
                               <h4 className="font-bold text-nara-text text-sm leading-tight">{meal.title}</h4>
                               <p className="text-[10px] text-slate-400 font-bold">{meal.calories} KCAL • {meal.protein}g Protein</p>
                            </div>
-                           {isCurrentlyActive ? (
-                             <div className="w-8 h-8 rounded-full bg-nara-hunter flex items-center justify-center text-white"><Check size={16} /></div>
-                           ) : (
-                             <RefreshCw size={16} className="text-slate-200" />
-                           )}
+                           {isActive ? <div className="w-8 h-8 rounded-full bg-nara-hunter flex items-center justify-center text-white"><Check size={16} /></div> : <RefreshCw size={16} className="text-slate-200" />}
                         </button>
                       );
                    })}

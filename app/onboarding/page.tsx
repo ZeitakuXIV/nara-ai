@@ -1,12 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart, MapPin } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { calculateBMI, getBmiStatus } from '@/utils/nutrition';
 import { supabase } from '@/utils/supabase';
+
+const INDONESIAN_PROVINCES = [
+  "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", 
+  "Gorontalo", "Jambi", "Jawa Barat", "Jawa Tengah", "Jawa Timur", 
+  "Kalimantan Barat", "Kalimantan Selatan", "Kalimantan Tengah", "Kalimantan Timur", "Kalimantan Utara", 
+  "Kepulauan Bangka Belitung", "Kepulauan Riau", "Lampung", "Maluku", "Maluku Utara", 
+  "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Papua", "Papua Barat", "Papua Barat Daya", 
+  "Papua Pegunungan", "Papua Selatan", "Papua Tengah", "Riau", "Sulawesi Barat", 
+  "Sulawesi Selatan", "Sulawesi Tengah", "Sulawesi Tenggara", "Sulawesi Utara", 
+  "Sumatera Barat", "Sumatera Selatan", "Sumatera Utara"
+];
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -41,19 +52,22 @@ export default function Onboarding() {
 
     try {
       // 1. SAVE TO SUPABASE
-      // Storing bio-profile first to ensure persistence
-      await supabase.from('user_profiles').upsert({
-        email: store.email,
-        full_name: store.fullName,
-        gender: store.gender,
-        age: store.age,
-        height: store.height,
-        weight: store.weight,
-        activity_level: store.activity,
-        location: store.location,
-        allergies: store.allergies,
-        dietary_goal: store.goal
-      });
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          email: store.email,
+          full_name: store.fullName,
+          gender: store.gender,
+          age: store.age,
+          height: store.height,
+          weight: store.weight,
+          activity_level: store.activity,
+          location: store.location,
+          allergies: store.allergies,
+          dietary_goal: store.goal
+        });
+
+      if (error) throw error;
 
       // 2. CALL AI ENGINE (PRODUCTION ENDPOINT: /api/recommend)
       const response = await fetch('/api/recommend', {
@@ -128,7 +142,7 @@ export default function Onboarding() {
                           <div className="flex items-center gap-2 text-nara-text font-black text-[10px] uppercase tracking-wider opacity-60">
                              <Ruler size={14} /> Height
                           </div>
-                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80 shadow-sm">
+                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80">
                              <input 
                                type="number"
                                value={store.height}
@@ -146,7 +160,7 @@ export default function Onboarding() {
                           <div className="flex items-center gap-2 text-nara-text font-black text-[10px] uppercase tracking-wider opacity-60">
                              <Weight size={14} /> Weight
                           </div>
-                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80 shadow-sm">
+                          <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-lg border border-white/80">
                              <input 
                                type="number"
                                value={store.weight}
@@ -193,12 +207,25 @@ export default function Onboarding() {
           {step === 3 && (
             <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 px-1 pb-10">
               <h1 className="text-2xl font-black text-nara-text tracking-tight">Constraints</h1>
-              <div className="space-y-2">
+              <div className="space-y-3">
                  <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Province (Indonesia)</label>
-                    <span className="text-[8px] font-bold text-nara-emerald bg-nara-emerald/10 px-2 py-0.5 rounded-full">Required for API</span>
                  </div>
-                 <input type="text" value={store.location} onChange={e => store.setBiometrics({ location: e.target.value })} placeholder="e.g. Jawa Barat, DKI Jakarta..." className="app-input py-5 font-bold" />
+                 <div className="relative">
+                   <select 
+                     value={store.location} 
+                     onChange={e => store.setBiometrics({ location: e.target.value })} 
+                     className="app-input py-5 font-bold appearance-none bg-white/50 backdrop-blur-md"
+                   >
+                     <option value="" disabled>Select your province...</option>
+                     {INDONESIAN_PROVINCES.map(p => (
+                       <option key={p} value={p}>{p}</option>
+                     ))}
+                   </select>
+                   <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-nara-hunter">
+                      <MapPin size={18} />
+                   </div>
+                 </div>
               </div>
               <div className="space-y-4">
                  <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-[0.2em]">Common Allergies</label>
