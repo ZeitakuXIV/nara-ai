@@ -153,6 +153,38 @@ def parse_ingredient_line(line_orig):
         "grams": round(gram_weight, 2)
     }
 
+def classify_cooking_method(instructions: str) -> str:
+    """
+    Classifies a recipe's cooking style based on instructions/directions.
+    Returns: 'boiled', 'fried', 'baked', 'steamed', or 'raw'
+    """
+    if not isinstance(instructions, str) or not instructions:
+        return 'raw'
+        
+    text = instructions.lower()
+    
+    # Priority 1: Steamed (gentle heating, wrapped)
+    steamed_kws = ['kukus', 'tim', 'pepes', 'steam', 'steamed', 'bumbu pepes']
+    if any(kw in text for kw in steamed_kws):
+        return 'steamed'
+        
+    # Priority 2: Boiled (water/liquid boiling)
+    boiled_kws = ['rebus', 'kuah', 'boil', 'boiled', 'sop', 'soto', 'gulai', 'kaldunya', 'mendidih', 'sayur asem', 'sayur lodeh', 'opor']
+    if any(kw in text for kw in boiled_kws):
+        return 'boiled'
+        
+    # Priority 3: Baked/Roasted/Grilled
+    baked_kws = ['panggang', 'bakar', 'oven', 'bake', 'baked', 'roast', 'roasted', 'grill', 'grilled', 'pepes bakar']
+    if any(kw in text for kw in baked_kws):
+        return 'baked'
+        
+    # Priority 4: Fried/Sauteed (oil heating)
+    fried_kws = ['goreng', 'tumis', 'sangrai', 'oseng', 'fry', 'fried', 'sauté', 'saute', 'deep fry', 'deep fried']
+    if any(kw in text for kw in fried_kws):
+        return 'fried'
+        
+    return 'raw'
+
 def process_master_recipe():
     input_path = 'datasets/master/master_recipe_database.csv'
     output_path = 'datasets/master/master_recipe_database.csv'

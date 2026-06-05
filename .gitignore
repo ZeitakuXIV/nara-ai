@@ -28,6 +28,8 @@ ai-engine/datasets/nutrition/
 ai-engine/datasets/recipe2/
 ai-engine/datasets/recipe3/
 ai-engine/datasets/recipe4/
+ai-engine/datasets/retention/*.pdf
+
 
 # Keep Master Datasets (Cleaned)
 !ai-engine/datasets/master/
