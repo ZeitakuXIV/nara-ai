@@ -1,92 +1,118 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Calendar, User, ShieldCheck, Utensils, Zap, Target } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
-
-const MOCK_MEAL_PLAN = [
-  { 
-    day: 'Monday', 
-    id: 1,
-    meals: [
-      {
-        type: 'Breakfast',
-        title: 'Nasi Tim Ayam Kampung',
-        image: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?q=80&w=800&auto=format&fit=crop',
-        base_calories: 345,
-        scaling_reason: 'Used steaming method to preserve 95% micronutrients.',
-        ingredients: [
-          { name: 'Beras Merah Lokal', qty: '125g' },
-          { name: 'Dada Ayam Kampung', qty: '110g' },
-          { name: 'Minyak Wijen', qty: '5ml' }
-        ]
-      },
-      {
-        type: 'Lunch',
-        title: 'Pepes Ikan Kembung',
-        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop',
-        base_calories: 520,
-        scaling_reason: 'Utilized Ikan Kembung for high Omega-3. Portion scaled based on your TDEE.',
-        ingredients: [
-          { name: 'Ikan Kembung', qty: '150g' },
-          { name: 'Tahu Putih', qty: '50g' },
-          { name: 'Daun Kemangi', qty: '10g' }
-        ]
-      }
-    ]
-  },
-  { day: 'Tuesday', id: 2, meals: [] },
-  { day: 'Wednesday', id: 3, meals: [] },
-  { day: 'Thursday', id: 4, meals: [] },
-  { day: 'Friday', id: 5, meals: [] },
-  { day: 'Saturday', id: 6, meals: [] },
-  { day: 'Sunday', id: 7, meals: [] }
-];
+import { supabase } from '@/utils/supabase';
 
 export default function Dashboard() {
-  const [selectedDay, setSelectedDay] = useState(MOCK_MEAL_PLAN[0]);
-  const [activeMealIndex, setActiveMealIndex] = useState(0);
-  const detailRef = useRef<HTMLDivElement>(null);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0); 
+  const [weeklyPlanIndices, setWeeklyPlanIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
   const store = useUserStore();
+
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // FETCH ON-DEMAND LOGIC
+  const fetchNewRecommendation = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 1. Trigger the AI Bridge
+      const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(store)
+      });
+
+      if (!response.ok) throw new Error("AI Recommendation failed");
+      const result = await response.json();
+
+      // 2. Persist Locally (Sync with Zustand)
+      if (result.top_20_recipes) {
+        const normalizedPool: Recipe[] = result.top_20_recipes.map((item: any, i: number) => ({
+          id: item.id || item.recipe_id || `recipe_${i}`,
+          title: item.title || item.recipe_name || 'NARA Selection',
+          image: item.image || `https://images.unsplash.com/photo-${[
+              '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
+            ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
+          calories: Math.round(item.calories || item.energy || 400),
+          protein: Math.round(item.protein || 25),
+          carbs: Math.round(item.carbs || item.carbohydrate || 45),
+          fat: Math.round(item.fat || 12),
+          scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
+          ingredients: item.ingredients || []
+        }));
+        console.log("Normalized Recipe Pool:", normalizedPool);
+        
+        store.setMealPlan(normalizedPool);
+      }
+    } catch (err) {
+      console.error("Manual Sync Error:", err);
+      setError("AI Engine is currently unreachable.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // On Load: If no local meal plan exists, fetch one.
+  useEffect(() => {
+    if (!store.mealPlan && store.isOnboarded) {
+       fetchNewRecommendation();
+    }
+  }, [store.mealPlan, store.isOnboarded]);
 
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
-  const currentMeal = selectedDay.meals && selectedDay.meals.length > 0 
-    ? selectedDay.meals[activeMealIndex] || selectedDay.meals[0]
-    : null;
-
-  const mealRatio = currentMeal?.type === 'Breakfast' ? 0.3 : 0.4;
-  const dynamicMealCalories = Math.round(targetMacros.calories * mealRatio);
-  const dynamicProtein = Math.round(targetMacros.protein * mealRatio);
-  const dynamicCarbs = Math.round(targetMacros.carbs * mealRatio);
-  const dynamicFat = Math.round(targetMacros.fat * mealRatio);
+  const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
+  // Strictly use the Local persistence (mealPlan) as default
+  const mealPool = store.mealPlan || [];
+  const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex % mealPool.length] : null;
 
   const chartData = currentMeal ? [
-    { name: 'Protein', value: dynamicProtein, color: '#3D644D' },
-    { name: 'Carbs', value: dynamicCarbs, color: '#10B981' },
-    { name: 'Fat', value: dynamicFat, color: '#5A8B6A' },
+    { name: 'Protein', value: currentMeal.protein, color: '#3D644D' },
+    { name: 'Carbs', value: currentMeal.carbs, color: '#10B981' },
+    { name: 'Fat', value: currentMeal.fat, color: '#5A8B6A' },
   ] : [];
 
-  const handleMealClick = (index: number) => {
-    setActiveMealIndex(index);
-    // Smooth scroll to the analysis section below
+  const handleSwapRecipe = (poolIndex: number) => {
+    const newPlan = [...weeklyPlanIndices];
+    newPlan[selectedDayIndex] = poolIndex;
+    setWeeklyPlanIndices(newPlan);
+    setIsSwapModalOpen(false);
+    
     setTimeout(() => {
       detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    }, 200);
   };
+
+  if (isLoading) {
+    return (
+      <div className="app-content bg-nara-light flex flex-col items-center justify-center">
+         <div className="relative w-20 h-20 mb-6">
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-nara-hunter/10 border-t-nara-hunter" />
+            <div className="absolute inset-0 flex items-center justify-center"><span className="text-nara-hunter font-black text-xl">N</span></div>
+         </div>
+         <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.3em] animate-pulse">On-Demand Calibration...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app-content bg-nara-light">
       
-      {/* Top Bar */}
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.2em] mb-1 opacity-60">
@@ -94,80 +120,59 @@ export default function Dashboard() {
            </p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-95 transition-all">
-           <Calendar className="text-nara-hunter" size={20} />
-        </div>
+        <button onClick={fetchNewRecommendation} className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter">
+           <RefreshCw size={20} />
+        </button>
       </header>
 
       <main className="px-6 flex-1 z-10 space-y-8 pb-40">
         {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
-          {MOCK_MEAL_PLAN.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => { setSelectedDay(d); setActiveMealIndex(0); }}
-              className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-[28px] transition-all duration-300 border ${
-                selectedDay.id === d.id 
-                ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' 
-                : 'bg-white/50 text-nara-muted border-white/80'
-              }`}
-            >
-              <span className="text-[9px] font-black uppercase tracking-widest opacity-60">{d.day.substring(0, 3)}</span>
-              <span className="text-lg font-black">{d.id}</span>
+          {days.map((day, idx) => (
+            <button key={day} onClick={() => setSelectedDayIndex(idx)} className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-[28px] transition-all duration-300 border ${selectedDayIndex === idx ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' : 'bg-white/50 text-nara-muted border-white/80'}`}>
+              <span className="text-[9px] font-black uppercase tracking-widest opacity-60">{day.substring(0, 3)}</span>
+              <span className="text-lg font-black">{idx + 1}</span>
             </button>
           ))}
         </div>
 
-        {/* Carousel Area */}
-        <div className="space-y-4">
-           <div className="flex items-center justify-between px-1">
-              <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Utensils size={14} /> Recommended Meals
-              </h2>
-           </div>
+        {/* Local Recommendation Card */}
+        {currentMeal ? (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between px-1">
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Utensils size={14} /> AI Recommendation</h2>
+                <button onClick={() => setIsSwapModalOpen(true)} className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all">
+                  <RefreshCw size={12} /> Swap Menu
+                </button>
+            </div>
 
-           {selectedDay.meals.length > 0 ? (
-             <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
-                {selectedDay.meals.map((meal, idx) => (
-                   <motion.button
-                     key={idx}
-                     onClick={() => handleMealClick(idx)}
-                     whileTap={{ scale: 0.98 }}
-                     className={`relative min-w-[280px] h-[380px] rounded-[48px] overflow-hidden shadow-soft border-4 transition-all ${
-                        activeMealIndex === idx ? 'border-nara-hunter' : 'border-transparent'
-                     }`}
-                   >
-                      <Image 
-                        src={meal.image} 
-                        alt={meal.title} 
-                        fill 
-                        className="object-cover" 
-                        priority 
-                        unoptimized 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      <div className="absolute top-6 left-6 flex gap-2">
-                         <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 text-[10px] text-white font-black uppercase tracking-wider">{meal.type}</div>
-                         <div className="bg-nara-hunter/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">
-                           {idx === activeMealIndex ? dynamicMealCalories : Math.round(targetMacros.calories * (idx === 0 ? 0.3 : 0.4))} KCAL
-                         </div>
-                      </div>
-                      <div className="absolute bottom-10 left-8 right-8 text-left">
-                         <h3 className="text-white text-3xl font-black leading-tight mb-2 tracking-tight">{meal.title}</h3>
-                      </div>
-                   </motion.button>
-                ))}
-             </div>
-           ) : (
-             <div className="glass-container p-12 flex flex-col items-center justify-center text-center bg-white/20">
-                <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6">
-                   <Zap size={32} className="text-nara-hunter animate-pulse" />
+            <motion.div key={`${currentMeal.id}-${selectedDayIndex}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer group">
+                <Image src={currentMeal.image} alt={currentMeal.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" priority unoptimized />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
+                <div className="absolute top-6 left-6 flex gap-2">
+                  <div className="bg-nara-hunter/90 backdrop-blur-md px-4 py-2 rounded-full border border-nara-hunter/40 text-[10px] text-white font-black">{currentMeal.calories} KCAL</div>
                 </div>
-                <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Optimizing Day {selectedDay.id}</h3>
-                <p className="text-xs text-nara-muted leading-relaxed max-w-[220px]">Calibrating local recipes for your signature biometrics...</p>
+                <div className="absolute bottom-10 left-8 right-8 text-left">
+                  <p className="text-nara-emerald font-black text-[10px] uppercase tracking-[0.3em] mb-2">Target Calibration</p>
+                  <h3 className="text-white text-3xl font-black leading-tight mb-4 tracking-tight">{currentMeal.title}</h3>
+                  <div className="flex gap-4 opacity-90">
+                      <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">P</span><span className="text-white text-xs font-black">{currentMeal.protein}g</span></div>
+                      <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">C</span><span className="text-white text-xs font-black">{currentMeal.carbs}g</span></div>
+                      <div className="flex flex-col"><span className="text-white/40 text-[8px] font-bold uppercase">F</span><span className="text-white text-xs font-black">{currentMeal.fat}g</span></div>
+                  </div>
+                </div>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="glass-container p-12 flex flex-col items-center justify-center text-center bg-white/20">
+             <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6">
+                <Zap size={32} className="text-nara-hunter animate-pulse" />
              </div>
-           )}
-        </div>
+             <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Initialize Analysis</h3>
+             <p className="text-[11px] text-nara-muted leading-relaxed max-w-[220px] font-bold uppercase tracking-wider">Your personal bio-signature hasn&apos;t been processed by the NARA engine yet.</p>
+             <button onClick={fetchNewRecommendation} className="btn-primary mt-8 py-4 px-10 shadow-lg">Run On-Demand Sync</button>
+          </div>
+        )}
 
         {currentMeal && (
           <div className="space-y-6" ref={detailRef}>
@@ -189,22 +194,13 @@ export default function Dashboard() {
                <div className="h-32 w-full relative flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
-                        <Pie 
-                          data={chartData} 
-                          innerRadius={40} 
-                          outerRadius={55} 
-                          paddingAngle={5} 
-                          dataKey="value"
-                          isAnimationActive={true}
-                          animationBegin={0}
-                          animationDuration={800}
-                        >
+                        <Pie data={chartData} innerRadius={40} outerRadius={55} paddingAngle={5} dataKey="value" isAnimationActive={true}>
                            {chartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
                         </Pie>
                      </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center">
-                     <span className="text-lg font-black text-nara-hunter leading-none">{dynamicMealCalories}</span>
+                     <span className="text-lg font-black text-nara-hunter leading-none">{currentMeal.calories}</span>
                      <span className="text-[8px] font-black uppercase text-slate-400 tracking-[0.2em] mt-1">KCAL</span>
                   </div>
                </div>
@@ -215,35 +211,59 @@ export default function Dashboard() {
                   <ShieldCheck size={18} className="text-nara-emerald" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-nara-emerald">Expert Reasoning Insight</span>
                </div>
-               <p className="text-white/80 text-[14px] leading-relaxed italic">
-                 &quot;To hit your daily target of {targetMacros.calories}kcal, I&apos;ve dynamically scaled this portion to {dynamicMealCalories}kcal. {currentMeal.scaling_reason}&quot;
-               </p>
+               <p className="text-white/80 text-[14px] leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </motion.div>
 
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
-                  {currentMeal.ingredients.map((ing, i) => (
-                     <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
-                        <span className="text-sm font-bold text-nara-text">{ing.name}</span>
-                        <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty}</span>
-                     </div>
-                  ))}
+                  {currentMeal.ingredients && currentMeal.ingredients.length > 0 ? (
+                    currentMeal.ingredients.map((ing: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
+                          <span className="text-sm font-bold text-nara-text">{ing.name || ing.item}</span>
+                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount || 'Adjusted'}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-6 text-center">
+                       <AlertCircle size={20} className="mx-auto text-slate-300 mb-2" />
+                       <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest">Ingredients being scaled by engine...</p>
+                    </div>
+                  )}
                </div>
             </div>
           </div>
         )}
       </main>
 
+      <AnimatePresence>
+        {isSwapModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 backdrop-blur-md">
+             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="w-full max-w-md h-[80vh] bg-white rounded-t-[48px] overflow-hidden flex flex-col shadow-2xl">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                   <div><h2 className="text-xl font-black text-nara-text tracking-tight">AI Suitability Pool</h2><p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-1">Matched Recommendations</p></div>
+                   <button onClick={() => setIsSwapModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"><X size={20} /></button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                   {mealPool.map((meal, idx) => {
+                      const isActive = (weeklyPlanIndices[selectedDayIndex] % mealPool.length) === idx;
+                      return (
+                        <button key={meal.id} onClick={() => handleSwapRecipe(idx)} className={`w-full p-4 rounded-[32px] border flex items-center gap-4 transition-all active:scale-95 ${isActive ? 'bg-nara-hunter/5 border-nara-hunter' : 'bg-white border-slate-100 shadow-sm'}`}>
+                           <div className="w-16 h-16 rounded-2xl overflow-hidden relative shrink-0 border border-slate-50"><Image src={meal.image} alt={meal.title} fill className="object-cover" unoptimized /></div>
+                           <div className="flex-1 text-left"><h4 className="font-bold text-nara-text text-sm leading-tight">{meal.title}</h4><p className="text-[10px] text-slate-400 font-bold mt-1">{meal.calories} KCAL • {meal.protein}g Protein</p></div>
+                           {isActive ? <div className="w-8 h-8 rounded-full bg-nara-hunter flex items-center justify-center text-white shadow-soft"><Check size={16} /></div> : <RefreshCw size={16} className="text-slate-200" />}
+                        </button>
+                      );
+                   })}
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-center gap-12 px-6 z-[100] pb-[env(safe-area-inset-bottom)]">
-         <Link href="/dashboard" className="nav-hitbox text-nara-hunter max-w-[80px]">
-            <Target size={24} fill="currentColor" />
-            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span>
-         </Link>
-         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors max-w-[80px]">
-            <User size={24} />
-            <span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span>
-         </Link>
+         <Link href="/dashboard" className="nav-hitbox text-nara-hunter max-w-[80px]"><Target size={24} fill="currentColor" /><span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Plan</span></Link>
+         <Link href="/profile" className="nav-hitbox text-slate-400 hover:text-nara-hunter transition-colors max-w-[80px]"><User size={24} /><span className="text-[10px] font-black uppercase mt-1.5 tracking-widest">Profile</span></Link>
       </nav>
     </div>
   );

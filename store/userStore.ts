@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+export interface Recipe {
+  id: string;
+  title: string;
+  image: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  scaling_reason: string;
+  ingredients: Array<{ name: string; qty: string }>;
+}
+
 export interface UserBiometrics {
   userId: string | null;
   email: string | null;
@@ -17,13 +29,15 @@ export interface UserBiometrics {
 
 interface UserStore extends UserBiometrics {
   isOnboarded: boolean;
+  mealPlan: Recipe[] | null; // Persisted AI results
   setBiometrics: (data: Partial<UserBiometrics>) => void;
   toggleAllergy: (allergy: string) => void;
+  setMealPlan: (plan: Recipe[]) => void;
   completeOnboarding: () => void;
   resetProfile: () => void;
 }
 
-const initialState: UserBiometrics & { isOnboarded: boolean } = {
+const initialState: UserBiometrics & { isOnboarded: boolean; mealPlan: Recipe[] | null } = {
   userId: null,
   email: null,
   fullName: null,
@@ -36,6 +50,7 @@ const initialState: UserBiometrics & { isOnboarded: boolean } = {
   allergies: [],
   goal: null,
   isOnboarded: false,
+  mealPlan: null,
 };
 
 export const useUserStore = create<UserStore>()(
@@ -48,6 +63,7 @@ export const useUserStore = create<UserStore>()(
           ? state.allergies.filter((a) => a !== allergy)
           : [...state.allergies, allergy],
       })),
+      setMealPlan: (plan) => set({ mealPlan: plan }),
       completeOnboarding: () => set({ isOnboarded: true }),
       resetProfile: () => set(initialState),
     }),

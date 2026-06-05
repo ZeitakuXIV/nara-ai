@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -48,6 +49,28 @@ recommender = None
 agent_runner = None
 session_service = None
 
+# File-based JSON storage to persist meal plans across restarts
+MEAL_PLANS_FILE = os.path.join(current_dir, "meal_plans.json")
+
+def load_meal_plans():
+    if os.path.exists(MEAL_PLANS_FILE):
+        try:
+            with open(MEAL_PLANS_FILE, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading meal plans: {e}")
+            return {}
+    return {}
+
+def save_meal_plans(plans):
+    try:
+        with open(MEAL_PLANS_FILE, "w") as f:
+            json.dump(plans, f)
+    except Exception as e:
+        print(f"Error saving meal plans: {e}")
+
+meal_plans = load_meal_plans()
+
 @app.on_event("startup")
 async def startup_event():
     global recommender, agent_runner, session_service
@@ -70,6 +93,7 @@ async def startup_event():
     )
 
 class RecommendationRequest(BaseModel):
+    user_id: Optional[str] = Field(default="default", description="Unique identifier for the user or session")
     weight_kg: float = Field(..., description="Weight of the user in kilograms")
     height_cm: float = Field(..., description="Height of the user in centimeters")
     age_years: int = Field(..., description="Age of the user in years")
@@ -91,6 +115,12 @@ def recommend(request: RecommendationRequest):
     try:
         profile = request.dict()
         result = recommender.recommend(profile)
+        
+        # Save computed schedule on success for chatbot retrieval context
+        if result.get("status") == "success":
+            meal_plans[request.user_id] = result
+            save_meal_plans(meal_plans)
+            
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recommendation computation failed: {str(e)}")
@@ -99,6 +129,7 @@ async def fetch_user_meal_plan(email: str):
     """
     Mock function to simulate fetching a meal plan from Supabase or another service.
     In a real scenario, this would use a database client or call another API.
+    (work in progress)
     """
     if not email:
         return None
