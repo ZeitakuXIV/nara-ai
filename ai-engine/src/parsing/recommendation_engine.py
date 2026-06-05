@@ -62,12 +62,24 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     """
     Calculates BMR via Mifflin-St Jeor, maps activity multipliers to TDEE,
     and applies calorie targets and macro distributions based on goals.
+    Implements Adjusted Body Weight (ABW) for BMI >= 25.0 to mitigate overestimation bias.
     """
-    # Basal Metabolic Rate (BMR)
+    height_m = height_cm / 100.0
+    bmi = weight_kg / (height_m * height_m) if height_m > 0 else 0
+    calc_weight = weight_kg
+    using_abw = False
+    
+    if bmi >= 25.0:
+        # Clinical ABW formula: Ideal Weight at BMI 22 + 25% of excess weight
+        ideal_weight = 22.0 * (height_m ** 2)
+        calc_weight = ideal_weight + 0.25 * (weight_kg - ideal_weight)
+        using_abw = True
+
+    # Basal Metabolic Rate (BMR) using calc_weight
     if sex.lower() == 'male':
-        bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age_years + 5.0
+        bmr = 10.0 * calc_weight + 6.25 * height_cm - 5.0 * age_years + 5.0
     else:
-        bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age_years - 161.0
+        bmr = 10.0 * calc_weight + 6.25 * height_cm - 5.0 * age_years - 161.0
         
     # Activity Multipliers
     multipliers = {
@@ -112,7 +124,8 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         "caloric_target_meal": round(cal_target / 3.0, 1),
         "protein_target_meal": round(protein_g / 3.0, 1),
         "fat_target_meal": round(fat_g / 3.0, 1),
-        "carbohydrates_target_meal": round(carb_g / 3.0, 1)
+        "carbohydrates_target_meal": round(carb_g / 3.0, 1),
+        "using_abw": using_abw
     }
 
 # ──────────────────────────────────────────────
@@ -292,6 +305,29 @@ class NaraRecommender:
         start_time = time.perf_counter()
         
         # ── 1. Ethics & Safety Cutoff Stage ──
+        # Check severe thinness (BMI < 17) with cutting/weight loss goals
+        height_m = user_profile.get("height_cm", 170.0) / 100.0
+        weight_kg = user_profile.get("weight_kg", 65.0)
+        bmi = weight_kg / (height_m * height_m) if height_m > 0 else 0
+        if bmi < 17.0 and user_profile.get("goal", "").lower() in ["weight_loss", "cutting"]:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+            return {
+                "status": "safety_cutoff_triggered",
+                "elapsed_ms": round(elapsed_ms, 2),
+                "clinical_condition_triggered": "Severe Thinness (BMI < 17)",
+                "medical_disclaimer_id": "Sistem NARA AI mendeteksi status BMI Anda adalah Severe Thinness (Sangat Kurus). Mengikuti target penurunan berat badan (Cutting) dalam kondisi ini sangat berbahaya bagi kesehatan. Sistem kami mengunci pendaftaran menu ini demi keselamatan Anda. Silakan ubah target Anda ke Maintenance atau Bulking.",
+                "medical_disclaimer_en": "NARA AI detected Severe Thinness (BMI < 17). Attempting a calorie deficit (Cutting) in this state is clinically unsafe. System recommendations have been locked. Please update your profile goal to Maintenance or Bulking.",
+                "exportable_profile": {
+                    "weight_kg": user_profile["weight_kg"],
+                    "height_cm": user_profile["height_cm"],
+                    "age_years": user_profile["age_years"],
+                    "sex": user_profile["sex"],
+                    "activity_level": user_profile["activity_level"],
+                    "goal": user_profile["goal"],
+                    "allergies": user_profile.get("allergies", [])
+                }
+            }
+
         user_conditions = [c.strip().lower() for c in user_profile.get("clinical_conditions", [])]
         matched_conditions = [c for c in user_conditions if c in CLINICAL_RED_LINES]
         

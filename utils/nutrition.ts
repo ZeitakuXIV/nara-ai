@@ -30,7 +30,17 @@ export function getBmiStatus(bmi: number) {
 export function calculateBMR(weight: number, heightCm: number, age: number, gender: 'male' | 'female' | null): number {
   if (!weight || !heightCm || !age || !gender) return 0;
   
-  let bmr = (10 * weight) + (6.25 * heightCm) - (5 * age);
+  const heightM = heightCm / 100;
+  const bmi = weight / (heightM * heightM);
+  let calculationWeight = weight;
+  
+  if (bmi >= 25.0) {
+    // Clinical ABW formula: Ideal Weight at BMI 22 + 25% of excess weight
+    const idealWeight = 22.0 * (heightM * heightM);
+    calculationWeight = idealWeight + 0.25 * (weight - idealWeight);
+  }
+  
+  let bmr = (10 * calculationWeight) + (6.25 * heightCm) - (5 * age);
   bmr += gender === 'male' ? 5 : -161;
   return Math.round(bmr);
 }

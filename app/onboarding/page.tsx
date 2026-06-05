@@ -72,7 +72,17 @@ export default function Onboarding() {
         body: JSON.stringify(store)
       });
 
-      if (!response.ok) throw new Error("AI Recommendation failed");
+      if (!response.ok) {
+        if (response.status === 403) {
+          const safetyData = await response.json();
+          if (safetyData.status === 'safety_shield') {
+            alert(`⚠️ NARA Safety Shield:\n\n${safetyData.message}\n\nSaran: ${safetyData.recommendation}\n\nDetail: ${safetyData.details}`);
+            setIsGenerating(false);
+            return;
+          }
+        }
+        throw new Error("AI Recommendation failed");
+      }
       const result = await response.json();
 
       // 3. PERSIST MEAL PLAN LOCALLY (Requirement: Save to LocalStorage via Zustand)

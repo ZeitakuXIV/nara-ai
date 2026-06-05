@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { encryptData, decryptData } from '../utils/crypto';
 
 export interface Recipe {
   id: string;
@@ -71,7 +72,18 @@ export const useUserStore = create<UserStore>()(
     }),
     {
       name: 'nara-user-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: async (name) => {
+          const value = localStorage.getItem(name);
+          if (!value) return null;
+          return await decryptData(value);
+        },
+        setItem: async (name, value) => {
+          const encrypted = await encryptData(value);
+          localStorage.setItem(name, encrypted);
+        },
+        removeItem: async (name) => localStorage.removeItem(name),
+      })),
     }
   )
 );

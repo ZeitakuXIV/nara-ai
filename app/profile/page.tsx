@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -13,7 +14,8 @@ import {
   RotateCcw,
   Target,
   ChevronDown,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { supabase } from '@/utils/supabase';
@@ -33,6 +35,36 @@ export default function Profile() {
   const store = useUserStore();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleDownloadData = () => {
+    // UU PDP No. 27/2022 Art. 5 Compliance: User data portability right
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+      app: "NARA AI",
+      law_compliance: "UU PDP No. 27/2022 Art. 5 (Right to Data Portability)",
+      exported_at: new Date().toISOString(),
+      user_profile: {
+        userId: store.userId,
+        email: store.email,
+        fullName: store.fullName,
+        gender: store.gender,
+        age: store.age,
+        height_cm: store.height,
+        weight_kg: store.weight,
+        activity_level: store.activity,
+        location_province: store.location,
+        allergies: store.allergies,
+        dietary_goal: store.goal
+      },
+      meal_plan: store.mealPlan
+    }, null, 2));
+    
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `nara_ai_user_data.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
 
   const bmi = useMemo(() => {
     const heightInMeters = store.height / 100;
@@ -168,7 +200,8 @@ export default function Profile() {
              {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
              {isSaving ? 'Saving...' : 'Deploy Changes'}
            </button>
-           <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
+           <button onClick={handleDownloadData} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><Download size={16} /> Download My Data (UU PDP)</button>
+           <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-rose-500 font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
         </div>
       </main>
 
