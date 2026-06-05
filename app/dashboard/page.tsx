@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
@@ -23,6 +23,15 @@ export default function Dashboard() {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // FETCH ON-DEMAND LOGIC
+  const handleResetPlan = async () => {
+    // 1. Clear cached meal plan
+    store.setMealPlan([]);
+    // 2. Reset weekly index list to default
+    setWeeklyPlanIndices([0, 1, 2, 3, 4, 5, 6]);
+    // 3. Fetch fresh recommendations
+    await fetchNewRecommendation();
+  };
+
   const fetchNewRecommendation = async () => {
     setIsLoading(true);
     setError(null);
@@ -120,9 +129,14 @@ export default function Dashboard() {
            </p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
-        <button onClick={fetchNewRecommendation} className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter">
-           <RefreshCw size={20} />
-        </button>
+        <div className="flex gap-2">
+           <button onClick={handleResetPlan} title="Reset & Regenerate Plan" className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-rose-500 hover:text-rose-600">
+              <RotateCcw size={20} />
+           </button>
+           <button onClick={fetchNewRecommendation} title="Refresh Recipes" className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter">
+              <RefreshCw size={20} />
+           </button>
+        </div>
       </header>
 
       <main className="px-6 flex-1 z-10 space-y-8 pb-40">
