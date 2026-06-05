@@ -31,6 +31,10 @@ export default function AppEntry() {
   };
 
   const handleGoogleLogin = async () => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      alert("Google Login is not configured. Please set up Supabase environment variables.");
+      return;
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
