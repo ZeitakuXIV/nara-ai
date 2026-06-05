@@ -53,6 +53,7 @@ export default function Dashboard() {
           scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
           ingredients: item.ingredients || []
         }));
+        console.log("Normalized Recipe Pool:", normalizedPool);
         
         store.setMealPlan(normalizedPool);
       }
