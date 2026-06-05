@@ -13,7 +13,8 @@ import { supabase } from '@/utils/supabase';
 export default function Dashboard() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0); 
   const [weeklyPlanIndices, setWeeklyPlanIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
@@ -22,62 +23,83 @@ export default function Dashboard() {
 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // FETCH ON-DEMAND LOGIC
-  const fetchNewRecommendation = async () => {
-    setIsLoading(true);
+  // SOURCE OF TRUTH: Fetch latest plan from Supabase
+  const fetchLatestPlanFromDB = async () => {
+    const identifier = store.userId || store.email;
+    if (!identifier) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // 1. Resolve Profile ID
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .or(`id.eq."${store.userId}",email.eq."${store.email}"`)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
+      // 2. Fetch latest meal plan from Supabase table
+      const { data: plan, error: planError } = await supabase
+        .from('meal_plans')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (plan && plan.plan_data) {
+        // Sync Zustand store with DB data
+        store.setMealPlan(plan.plan_data);
+      } else {
+        console.log("No stored plan found in Supabase.");
+      }
+    } catch (err) {
+      console.error("Supabase Fetch Error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ON-DEMAND RE-SYNC: Force AI Engine to run and save to DB
+  const handleManualSync = async () => {
+    setIsSyncing(true);
     setError(null);
 
     try {
-      // 1. Trigger the AI Bridge
       const response = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(store)
       });
 
-      if (!response.ok) throw new Error("AI Recommendation failed");
+      if (!response.ok) throw new Error("AI Engine Sync failed");
       const result = await response.json();
 
-      // 2. Persist Locally (Sync with Zustand)
       if (result.top_20_recipes) {
-        const normalizedPool: Recipe[] = result.top_20_recipes.map((item: any, i: number) => ({
-          id: item.id || item.recipe_id || `recipe_${i}`,
-          title: item.title || item.recipe_name || 'NARA Selection',
-          image: item.image || `https://images.unsplash.com/photo-${[
-              '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'
-            ][i % 3]}?q=80&w=800&auto=format&fit=crop`,
-          calories: Math.round(item.calories || item.energy || 400),
-          protein: Math.round(item.protein || 25),
-          carbs: Math.round(item.carbs || item.carbohydrate || 45),
-          fat: Math.round(item.fat || 12),
-          scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
-          ingredients: item.ingredients || []
-        }));
-        console.log("Normalized Recipe Pool:", normalizedPool);
-        
-        store.setMealPlan(normalizedPool);
+        // Update local store (UI will react)
+        store.setMealPlan(result.top_20_recipes);
       }
     } catch (err) {
       console.error("Manual Sync Error:", err);
-      setError("AI Engine is currently unreachable.");
+      setError("AI Engine unreachable.");
     } finally {
-      setIsLoading(false);
+      setIsSyncing(false);
     }
   };
 
-  // On Load: If no local meal plan exists, fetch one.
+  // Initial Load: Always sync with DB
   useEffect(() => {
-    if (!store.mealPlan && store.isOnboarded) {
-       fetchNewRecommendation();
-    }
-  }, [store.mealPlan, store.isOnboarded]);
+    fetchLatestPlanFromDB();
+  }, [store.email, store.userId]);
 
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
-  // Strictly use the Local persistence (mealPlan) as default
   const mealPool = store.mealPlan || [];
   const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex % mealPool.length] : null;
 
@@ -105,7 +127,7 @@ export default function Dashboard() {
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-4 border-nara-hunter/10 border-t-nara-hunter" />
             <div className="absolute inset-0 flex items-center justify-center"><span className="text-nara-hunter font-black text-xl">N</span></div>
          </div>
-         <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.3em] animate-pulse">On-Demand Calibration...</p>
+         <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.3em] animate-pulse">Querying Database...</p>
       </div>
     );
   }
@@ -120,8 +142,12 @@ export default function Dashboard() {
            </p>
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
-        <button onClick={fetchNewRecommendation} className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter">
-           <RefreshCw size={20} />
+        <button 
+          onClick={handleManualSync} 
+          disabled={isSyncing}
+          className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter disabled:opacity-50"
+        >
+           {isSyncing ? <Loader2 className="animate-spin" size={20} /> : <RefreshCw size={20} />}
         </button>
       </header>
 
@@ -136,7 +162,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Local Recommendation Card */}
         {currentMeal ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between px-1">
@@ -169,8 +194,8 @@ export default function Dashboard() {
                 <Zap size={32} className="text-nara-hunter animate-pulse" />
              </div>
              <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Initialize Analysis</h3>
-             <p className="text-[11px] text-nara-muted leading-relaxed max-w-[220px] font-bold uppercase tracking-wider">Your personal bio-signature hasn&apos;t been processed by the NARA engine yet.</p>
-             <button onClick={fetchNewRecommendation} className="btn-primary mt-8 py-4 px-10 shadow-lg">Run On-Demand Sync</button>
+             <p className="text-[11px] text-nara-muted leading-relaxed max-w-[220px] font-bold uppercase tracking-wider">Your personal bio-signature is stored in the NARA cloud. Ready for retrieval.</p>
+             <button onClick={handleManualSync} className="btn-primary mt-8 py-4 px-10 shadow-lg">Run On-Demand Sync</button>
           </div>
         )}
 
@@ -233,7 +258,6 @@ export default function Dashboard() {
                </div>
             </div>
 
-            {/* PREPARATION STEPS */}
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Preparation Steps</h3>
                <div className="space-y-6">
