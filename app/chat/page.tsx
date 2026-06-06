@@ -6,7 +6,15 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Send, User, MoreVertical, Plus, Calendar, ShieldCheck, Loader2, Target } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 
-const INITIAL_MESSAGES = [
+interface Message {
+  id: number;
+  sender: string;
+  text: string;
+  timestamp: string;
+  isXAI?: boolean;
+}
+
+const INITIAL_MESSAGES: Message[] = [
   { id: 1, sender: 'nara', text: "Hello! I'm NARA, your Nutrition Agent. I'm connected to the XAI Inference Engine.", timestamp: '09:00' },
   { id: 2, sender: 'nara', text: "Based on my reasoning, I've scaled your portions to match your goals. Portions are increased by 15% to hit your protein threshold.", timestamp: '09:01', isXAI: true }
 ];
@@ -43,9 +51,11 @@ export default function Chatbot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsg,
+          email: store.email,
+          // mealPlan from store acts as client-side fallback if Supabase fetch fails server-side
+          // No biometrics are sent — ethical decision, keep personal health data off the agent
           context: {
-            goal: store.goal,
-            bmi: (store.weight / Math.pow(store.height / 100, 2)).toFixed(1)
+            mealPlan: store.mealPlan ?? null,
           }
         })
       });

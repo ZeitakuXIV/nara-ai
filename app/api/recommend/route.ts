@@ -2,9 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabase';
 
 // Python Microservice configuration
-const PYTHON_MICROSERVICE_URL = process.env.PYTHON_MICROSERVICE_URL || 'http://127.0.0.1:8000';
+const PYTHON_MICROSERVICE_URL =
+  process.env.PYTHON_MICROSERVICE_URL ||
+  process.env.NEXT_PUBLIC_AI_ENGINE_URL ||
+  'http://127.0.0.1:8000';
 
 export const dynamic = 'force-dynamic';
+
+// Parser to split comma-separated ingredients into name and quantity objects
+const parseIngredients = (ingredientsStr: string): Array<{ name: string; qty: string }> => {
+  if (!ingredientsStr || typeof ingredientsStr !== 'string') return [];
+  return ingredientsStr.split(',').map(part => {
+    const trimmed = part.trim();
+    // Match something like "1 butir", "250 gr", "2 siung", "1/2 sdt", "0.5 kg" etc.
+    const match = trimmed.match(/^(\d+(?:\/\d+)?(?:\.\d+)?\s*(?:kg|gr|g|siung|butir|sdm|sdt|ml|liter|bungkus|lembar|piring|gelas|biji|ruas|tangkai|buah)?)\s+(.+)$/i);
+    if (match) {
+      return {
+        qty: match[1].trim(),
+        name: match[2].trim()
+      };
+    }
+    return {
+      qty: 'Secukupnya',
+      name: trimmed
+    };
+  });
+};
 
 /**
  * Normalizes Python AI Engine results to match the PWA frontend expectations.
@@ -12,37 +35,46 @@ export const dynamic = 'force-dynamic';
 const normalizeAiResponse = (result: any) => {
   if (!result || result.status !== 'success') return result;
 
-  // Combine primary_schedule and alternative_pool into a single pool for the PWA
   const rawPool = [
     ...(result.primary_schedule || []),
     ...(result.alternative_pool || [])
   ];
 
-  const normalizedPool = rawPool.map((item: any, i: number) => ({
-    id: item.id || `ai_${i}_${Date.now()}`,
-    title: item.title || 'NARA Specialty',
-    // Logic: Use existing image if AI provides it, else use high-quality placeholders
-    image: item.image || `https://images.unsplash.com/photo-${[
-        '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd', '1547592166-23ac45744acd'
-      ][i % 4]}?q=80&w=800&auto=format&fit=crop`,
-    calories: Math.round(item.calories_per_serving || item.calories || 400),
-    protein: Math.round(item.protein_per_serving || item.protein || 25),
-    carbs: Math.round(item.carbs_per_serving || item.carbs || 45),
-    fat: Math.round(item.fat_per_serving || item.fat || 12),
-    // Scaling reason: Join explanations array or use default
-    scaling_reason: Array.isArray(item.explanations) 
+  const normalizedPool = rawPool.map((item: any, i: number) => {
+    const scaling_reason = Array.isArray(item.explanations) 
       ? item.explanations.join(' ') 
-      : (item.scaling_reason || 'Calibrated based on your province and biometrics.'),
-    instructions: item.instructions || 'Cooking steps are currently being analyzed by the expert system.',
-    ingredients: item.ingredients || [
-      { name: 'Protein Source', qty: 'Scaled to target' },
-      { name: 'Local Carbohydrate', qty: 'Standard portion' }
-    ]
-  }));
+      : (item.scaling_reason || 'Calibrated based on your province and biometrics.');
+
+    // Use structured ingredients if available from Python, else parse the raw string
+    let finalIngredients = [];
+    if (Array.isArray(item.ingredients) && item.ingredients.length > 0 && typeof item.ingredients[0] === 'object') {
+       finalIngredients = item.ingredients.map((ing: any) => ({
+         name: ing.item || ing.name || 'Ingredient',
+         qty: ing.qty || ing.amount || (ing.grams ? `${ing.grams}g` : 'Adjusted')
+       }));
+    } else {
+       finalIngredients = parseIngredients(item.ingredients_raw || item.ingredients);
+    }
+
+    return {
+      id: item.id || `ai_${i}_${Date.now()}`,
+      title: item.title || 'NARA Specialty',
+      image: item.image || `https://images.unsplash.com/photo-${[
+          '1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd', '1547592166-23ac45744acd'
+        ][i % 4]}?q=80&w=800&auto=format&fit=crop`,
+      calories: Math.round(item.calories_per_serving || item.calories || 400),
+      protein: Math.round(item.protein_per_serving || item.protein || 25),
+      carbs: Math.round(item.carbs_per_serving || item.carbs || 45),
+      fat: Math.round(item.fat_per_serving || item.fat || 12),
+      scaling_reason: scaling_reason,
+      instructions: item.instructions || 'Cooking steps are currently being analyzed by the expert system.',
+      ingredients: finalIngredients
+    };
+  });
 
   return {
     ...result,
-    top_20_recipes: normalizedPool // This is what the PWA (Zustand) expects
+    top_20_recipes: normalizedPool 
   };
 };
 
@@ -58,7 +90,8 @@ const generateMockRecommendations = (goal: string) => {
     ...recipes[i % recipes.length],
     id: `mock_${i}_${Date.now()}`,
     image: `https://images.unsplash.com/photo-${['1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'][i % 3]}?q=80&w=800&auto=format&fit=crop`,
-    ingredients: [{ name: 'Base Ingredient', qty: 'Scaled' }]
+    ingredients: [{ name: 'Base Ingredient', qty: 'Scaled' }],
+    instructions: 'Prepare ingredients and cook according to standard protocol.'
   }));
 
   return {
@@ -74,7 +107,7 @@ const mapActivity = (level: string) => {
     'sedentary': 'sedentary',
     'light': 'lightly_active',
     'moderate': 'moderately_active',
-    'extra': 'highly_active'
+    'extra': 'extra_active'
   };
   return mapping[level] || 'sedentary';
 };
@@ -114,22 +147,26 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pythonPayload),
-        signal: AbortSignal.timeout(10000) // Increase to 10s for heavy AI tasks
+        signal: AbortSignal.timeout(10000)
       });
 
-      if (!aiResponse.ok) throw new Error('AI Server Error');
+      if (!aiResponse.ok) throw new Error(`AI Server Error: ${aiResponse.status}`);
       const rawResult = await aiResponse.json();
-      
-      // CRITICAL: Normalize the Python specific format to the PWA format
       result = normalizeAiResponse(rawResult);
 
     } catch (fetchErr) {
-      console.warn("AI Engine unreachable. Using Safety Fallback.");
+      console.warn("AI Engine unreachable. Using Safety Fallback. Error:", fetchErr);
       result = generateMockRecommendations(body.goal);
     }
 
-    if (result.status === 'safety_cutoff_triggered') {
-      return NextResponse.json(result, { status: 403 });
+    // HANDLE SAFETY CUTOFF
+    if (result.status === 'safety_cutoff_triggered' || result.status === 'safety_shield') {
+      return NextResponse.json({
+        status: 'safety_shield',
+        message: 'NARA Safety Shield Triggered: Based on your biometrics, the current goal may be medically unsafe.',
+        recommendation: result.clinical_condition_triggered || 'Maintenance mode enforced.',
+        details: result.medical_disclaimer_id || result.medical_disclaimer_en || 'Consult a clinical dietitian.'
+      }, { status: 403 });
     }
 
     // PERSIST TO SUPABASE
@@ -153,7 +190,7 @@ export async function POST(req: NextRequest) {
          await supabase.from('meal_plans').insert({
            user_id: user.id,
            target_calories: result.target_calories || 0,
-           plan_data: result.top_20_recipes // This now contains the normalized REAL recipes
+           plan_data: result.top_20_recipes
          });
        }
     }

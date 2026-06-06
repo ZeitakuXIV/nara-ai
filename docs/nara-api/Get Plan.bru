@@ -1,0 +1,26 @@
+meta {
+  name: Get Meal Plan (GET)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/plan/default_user
+  body: none
+  auth: none
+}
+
+docs {
+  # Get Meal Plan Endpoint
+  
+  Fetches the active meal plan and portions for the specified user.
+  
+  ### Lookup Formats
+  This endpoint accepts:
+  1. A UUID (e.g. `user_id` from user_profiles)
+  2. A username/default identifier (e.g. `default_user`)
+  3. A user's email address (e.g. `user@example.com` - looks up the UUID dynamically)
+  
+  ### Fallback
+  If the specified user does not have a cached plan, the API will try to fallback to the `default_user` plan.
+}

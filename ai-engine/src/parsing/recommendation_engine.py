@@ -62,12 +62,24 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     """
     Calculates BMR via Mifflin-St Jeor, maps activity multipliers to TDEE,
     and applies calorie targets and macro distributions based on goals.
+    Implements Adjusted Body Weight (ABW) for BMI >= 25.0 to mitigate overestimation bias.
     """
-    # Basal Metabolic Rate (BMR)
+    height_m = height_cm / 100.0
+    bmi = weight_kg / (height_m * height_m) if height_m > 0 else 0
+    calc_weight = weight_kg
+    using_abw = False
+    
+    if bmi >= 25.0:
+        # Clinical ABW formula: Ideal Weight at BMI 22 + 25% of excess weight
+        ideal_weight = 22.0 * (height_m ** 2)
+        calc_weight = ideal_weight + 0.25 * (weight_kg - ideal_weight)
+        using_abw = True
+
+    # Basal Metabolic Rate (BMR) using calc_weight
     if sex.lower() == 'male':
-        bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age_years + 5.0
+        bmr = 10.0 * calc_weight + 6.25 * height_cm - 5.0 * age_years + 5.0
     else:
-        bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age_years - 161.0
+        bmr = 10.0 * calc_weight + 6.25 * height_cm - 5.0 * age_years - 161.0
         
     # Activity Multipliers
     multipliers = {
@@ -77,7 +89,16 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         'very_active': 1.725,
         'extra_active': 1.9
     }
-    activity_factor = multipliers.get(activity_level.lower(), 1.2)
+    # Normalize activity level keys from frontend
+    activity_key = activity_level.lower().strip()
+    activity_map = {
+        'light': 'lightly_active',
+        'moderate': 'moderately_active',
+        'extra': 'extra_active',
+        'very': 'very_active'
+    }
+    activity_key = activity_map.get(activity_key, activity_key)
+    activity_factor = multipliers.get(activity_key, 1.2)
     tdee = bmr * activity_factor
     
     # Calorie Target based on Goals
@@ -103,7 +124,8 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         "caloric_target_meal": round(cal_target / 3.0, 1),
         "protein_target_meal": round(protein_g / 3.0, 1),
         "fat_target_meal": round(fat_g / 3.0, 1),
-        "carbohydrates_target_meal": round(carb_g / 3.0, 1)
+        "carbohydrates_target_meal": round(carb_g / 3.0, 1),
+        "using_abw": using_abw
     }
 
 # ──────────────────────────────────────────────
@@ -220,6 +242,13 @@ class NaraRecommender:
     def __init__(self):
         print("📂 NaraRecommender: Loading master recipe database ...")
         self.df = pd.read_csv(RECIPE_CSV)
+        # Bug #2 Fix: Filter servings outliers (>100) and low structured match rate (<0.3)
+        initial_len = len(self.df)
+        self.df = self.df[
+            (self.df['estimated_servings'] <= 100) & 
+            (self.df['structured_match_rate'] >= 0.3)
+        ].reset_index(drop=True)
+        print(f"🧹 Filtered recipe database: {initial_len} -> {len(self.df)} (removed {initial_len - len(self.df)} recipes with estimated_servings > 100 or structured_match_rate < 0.3)")
         self.allergen_df = pd.read_csv(ALLERGEN_CSV)
         
         # Load regional consumption database
@@ -276,6 +305,29 @@ class NaraRecommender:
         start_time = time.perf_counter()
         
         # ── 1. Ethics & Safety Cutoff Stage ──
+        # Check severe thinness (BMI < 17) with cutting/weight loss goals
+        height_m = user_profile.get("height_cm", 170.0) / 100.0
+        weight_kg = user_profile.get("weight_kg", 65.0)
+        bmi = weight_kg / (height_m * height_m) if height_m > 0 else 0
+        if bmi < 17.0 and user_profile.get("goal", "").lower() in ["weight_loss", "cutting"]:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+            return {
+                "status": "safety_cutoff_triggered",
+                "elapsed_ms": round(elapsed_ms, 2),
+                "clinical_condition_triggered": "Severe Thinness (BMI < 17)",
+                "medical_disclaimer_id": "Sistem NARA AI mendeteksi status BMI Anda adalah Severe Thinness (Sangat Kurus). Mengikuti target penurunan berat badan (Cutting) dalam kondisi ini sangat berbahaya bagi kesehatan. Sistem kami mengunci pendaftaran menu ini demi keselamatan Anda. Silakan ubah target Anda ke Maintenance atau Bulking.",
+                "medical_disclaimer_en": "NARA AI detected Severe Thinness (BMI < 17). Attempting a calorie deficit (Cutting) in this state is clinically unsafe. System recommendations have been locked. Please update your profile goal to Maintenance or Bulking.",
+                "exportable_profile": {
+                    "weight_kg": user_profile["weight_kg"],
+                    "height_cm": user_profile["height_cm"],
+                    "age_years": user_profile["age_years"],
+                    "sex": user_profile["sex"],
+                    "activity_level": user_profile["activity_level"],
+                    "goal": user_profile["goal"],
+                    "allergies": user_profile.get("allergies", [])
+                }
+            }
+
         user_conditions = [c.strip().lower() for c in user_profile.get("clinical_conditions", [])]
         matched_conditions = [c for c in user_conditions if c in CLINICAL_RED_LINES]
         
@@ -450,92 +502,139 @@ class NaraRecommender:
             
         # ── 7. Formatting & Explainable AI (XAI) serving portion scaling ──
         prov_display = user_profile.get("province", "Nasional")
+        if not prov_display:
+            prov_display = "Nasional"
+        prov_display = prov_display.title()
+
         days_name = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
-        
+
         def format_recipe(r, cat, ingredients, day_label=None):
-            rec_cal_standard = r["Recipe Caloric Value"] * 3.0
-            rec_prot_standard = r["Recipe Protein"] * 3.0
-            rec_fat_standard = r["Recipe Fat"] * 3.0
-            rec_carb_standard = r["Recipe Carbohydrates"] * 3.0
+            # 1. Determine base serving weight based on category
+            if cat in ['red_meat', 'poultry', 'fish_seafood']:
+                base_weight_g = 100.0
+            elif cat == 'plant_based':
+                base_weight_g = 120.0
+            elif cat == 'vegetable':
+                base_weight_g = 100.0
+            else:
+                base_weight_g = 300.0
+
+            # 2. Scale database per-100g values to the standard base serving size
+            rec_cal_standard = r["Recipe Caloric Value"] * (base_weight_g / 100.0)
+            rec_prot_standard = r["Recipe Protein"] * (base_weight_g / 100.0)
+            rec_fat_standard = r["Recipe Fat"] * (base_weight_g / 100.0)
+            rec_carb_standard = r["Recipe Carbohydrates"] * (base_weight_g / 100.0)
+            
             density_val = r["Recipe Nutrition Density"]
             ras_val = r["ras_score"]
             
             # Check if this is a standalone protein/side dish (lauk-pauk) lacking carbohydrate
-            # Threshold: standard serving of 300g contains less than 20g of carbohydrates
             has_carb = rec_carb_standard >= 20.0
             
+            # 3. Portion scaling multiplier calculation
+            is_protein_dish = cat in ['red_meat', 'poultry', 'fish_seafood', 'plant_based']
+            
+            if is_protein_dish:
+                # Scale primarily based on protein target of the meal (t_prot)
+                scale_factor = t_prot / max(rec_prot_standard, 1.0)
+                scale_factor = round(scale_factor, 1)
+                # Cap to safety bounds for protein [0.5, 1.2]
+                scale_factor = max(0.5, min(1.2, scale_factor))
+            else:
+                # Scale based on calorie target
+                scale_factor = t_cal / max(rec_cal_standard, 1.0)
+                scale_factor = round(scale_factor, 1)
+                # Cap to safety bounds [0.5, 1.5]
+                scale_factor = max(0.5, min(1.5, scale_factor))
+
+            scaled_cal = rec_cal_standard * scale_factor
+            scaled_prot = rec_prot_standard * scale_factor
+            scaled_fat = rec_fat_standard * scale_factor
+            scaled_carb = rec_carb_standard * scale_factor
+
+            # 4. Pair with a carbohydrate staple and scale it dynamically to close the calorie gap
             carb_name = None
             carb_cal = 0.0
             carb_prot = 0.0
             carb_fat = 0.0
             carb_carbs = 0.0
+            carb_weight_g = 0.0
+            full_carb_name = None
             
             if not has_carb:
-                # Pair with a BPS-aligned regional carbohydrate staple dynamically!
                 prov_key = prov_display.strip().lower()
                 prov_consumption = self.consumption_map.get(prov_key, {})
                 if not prov_consumption and self.consumption_map:
-                    # Fallback to national
                     prov_consumption = self.consumption_map.get("nasional", {})
                 
-                # Fetch consumption rates (kg/capita/year)
                 beras_rate = max(1.0, prov_consumption.get("beras", 80.0))
                 ubi_rate = prov_consumption.get("ubi jalar", 0.0)
                 singkong_rate = prov_consumption.get("singkong", 0.0)
                 sagu_rate = prov_consumption.get("sagu", 0.0)
                 
-                # Calculate relative ratio compared to rice
                 ubi_ratio = ubi_rate / beras_rate
                 singkong_ratio = singkong_rate / beras_rate
                 sagu_ratio = sagu_rate / beras_rate
                 
                 if ubi_ratio >= 0.20:
-                    carb_name = "Ubi Jalar Rebus (150g)"
-                    carb_cal = 114.0
-                    carb_prot = 2.0
-                    carb_fat = 0.2
-                    carb_carbs = 27.0
+                    carb_name = "Ubi Jalar Rebus"
+                    base_carb_cal = 76.0
+                    base_carb_prot = 1.3
+                    base_carb_fat = 0.1
+                    base_carb_carbs = 17.7
                 elif singkong_ratio >= 0.15 or sagu_ratio >= 0.10:
-                    carb_name = "Singkong Rebus (150g)"
-                    carb_cal = 160.0
-                    carb_prot = 1.5
-                    carb_fat = 0.3
-                    carb_carbs = 38.0
+                    carb_name = "Singkong Rebus"
+                    base_carb_cal = 120.0
+                    base_carb_prot = 1.2
+                    base_carb_fat = 0.2
+                    base_carb_carbs = 28.0
                 else:
-                    carb_name = "Nasi Putih (150g)"
-                    carb_cal = 195.0
-                    carb_prot = 4.0
-                    carb_fat = 0.3
-                    carb_carbs = 43.0
-            
-            # Deduct paired carb from target before scaling the side dish
-            t_cal_adj = max(100.0, t_cal - carb_cal)
-            
-            # Dynamic serving portion scale multiplier calculation
-            scale_factor = t_cal_adj / max(rec_cal_standard, 1.0)
-            scale_factor = round(scale_factor, 1)
-            # Clip scale factor to reasonable boundaries (0.5x to 2.5x) to avoid absurd volumes
-            scale_factor = max(0.5, min(2.5, scale_factor))
-            
-            scaled_cal = round(rec_cal_standard * scale_factor + carb_cal, 1)
-            scaled_prot = round(rec_prot_standard * scale_factor + carb_prot, 1)
-            scaled_fat = round(rec_fat_standard * scale_factor + carb_fat, 1)
-            scaled_carb = round(rec_carb_standard * scale_factor + carb_carbs, 1)
+                    carb_name = "Nasi Putih"
+                    base_carb_cal = 130.0
+                    base_carb_prot = 2.7
+                    base_carb_fat = 0.3
+                    base_carb_carbs = 28.0
+                
+                # Close the remaining calorie target gap using the carbohydrate staple
+                cal_deficit = t_cal - scaled_cal
+                carb_weight_g = cal_deficit / (base_carb_cal / 100.0)
+                carb_weight_g = round(carb_weight_g, 0)
+                
+                # Apply safety boundaries [50g, 250g]
+                if carb_weight_g < 50.0:
+                    carb_weight_g = 0.0
+                else:
+                    carb_weight_g = min(250.0, carb_weight_g)
+                    carb_cal = base_carb_cal * (carb_weight_g / 100.0)
+                    carb_prot = base_carb_prot * (carb_weight_g / 100.0)
+                    carb_fat = base_carb_fat * (carb_weight_g / 100.0)
+                    carb_carbs = base_carb_carbs * (carb_weight_g / 100.0)
+                    full_carb_name = f"{carb_name} ({int(carb_weight_g)}g)"
+            else:
+                carb_weight_g = 0.0
+                full_carb_name = None
             
             # Formulate explanations
-            cal_diff = round(scaled_cal - t_cal, 1)
-            if carb_name:
-                scale_reason = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * 300, 0):.0f}g) disandingkan dengan {carb_name} sebagai karbohidrat utama ({cal_diff:+.1f} kkal dari target)."
-            else:
-                scale_reason = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * 300, 0):.0f}g) sebagai hidangan lengkap satu piring ({cal_diff:+.1f} kkal dari target)."
+            total_cal = round(scaled_cal + carb_cal, 1)
+            total_prot = round(scaled_prot + carb_prot, 1)
+            total_fat = round(scaled_fat + carb_fat, 1)
+            total_carb = round(scaled_carb + carb_carbs, 1)
             
-            prot_err = abs(scaled_prot - t_prot) / max(t_prot, 1.0)
+            cal_diff = round(total_cal - t_cal, 1)
+            
+            portion_desc = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * base_weight_g, 0):.0f}g) {r['title']}"
+            if full_carb_name:
+                scale_reason = f"{portion_desc} disandingkan dengan {full_carb_name} sebagai karbohidrat utama ({cal_diff:+.1f} kkal dari target)."
+            else:
+                scale_reason = f"{portion_desc} sebagai hidangan lengkap satu piring ({cal_diff:+.1f} kkal dari target)."
+            
+            prot_err = abs(total_prot - t_prot) / max(t_prot, 1.0)
             if prot_err < 0.15:
                 macro_reason = "Proporsi Protein ideal untuk mendukung pemulihan otot dan metabolisme."
-            elif scaled_prot > t_prot:
-                macro_reason = f"Kaya Protein ({scaled_prot}g), melebihi target protein makan Anda untuk mendukung metabolisme."
+            elif total_prot > t_prot:
+                macro_reason = f"Kaya Protein ({total_prot}g), memenuhi target protein makan Anda untuk mendukung metabolisme."
             else:
-                macro_reason = f"Makronutrisi seimbang (P: {scaled_prot}g, C: {scaled_carb}g)."
+                macro_reason = f"Makronutrisi seimbang (P: {total_prot}g, C: {total_carb}g)."
                 
             if density_val > 1.5:
                 density_reason = f"Kepadatan gizi mikro tinggi ({density_val:.2f}), kaya akan Zat Besi, Kalsium, & Vitamin penting."
@@ -553,13 +652,15 @@ class NaraRecommender:
                 
             res = {
                 "title": r["title"],
+                "ingredients": r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "",
+                "instructions": r["instructions"] if "instructions" in r and pd.notna(r["instructions"]) else "",
                 "score": round(r["recommendation_score"] * 100, 1),
                 "food_category": cat,
                 "portion_scale_factor": scale_factor,
-                "calories_per_serving": scaled_cal,
-                "protein_per_serving": scaled_prot,
-                "fat_per_serving": scaled_fat,
-                "carbs_per_serving": scaled_carb,
+                "calories_per_serving": total_cal,
+                "protein_per_serving": total_prot,
+                "fat_per_serving": total_fat,
+                "carbs_per_serving": total_carb,
                 "density": density_val,
                 "regional_alignment_score": round(ras_val * 100, 1),
                 "source": r["source"],

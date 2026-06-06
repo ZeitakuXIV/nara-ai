@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { encryptData, decryptData } from '../utils/crypto';
 
 export interface Recipe {
   id: string;
@@ -34,6 +35,7 @@ interface UserStore extends UserBiometrics {
   setBiometrics: (data: Partial<UserBiometrics>) => void;
   toggleAllergy: (allergy: string) => void;
   setMealPlan: (plan: Recipe[]) => void;
+  clearMealPlan: () => void; // Clear only meal plan, keep profile intact
   completeOnboarding: () => void;
   resetProfile: () => void;
 }
@@ -65,12 +67,24 @@ export const useUserStore = create<UserStore>()(
           : [...state.allergies, allergy],
       })),
       setMealPlan: (plan) => set({ mealPlan: plan }),
+      clearMealPlan: () => set({ mealPlan: null }),
       completeOnboarding: () => set({ isOnboarded: true }),
       resetProfile: () => set(initialState),
     }),
     {
       name: 'nara-user-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: async (name) => {
+          const value = localStorage.getItem(name);
+          if (!value) return null;
+          return await decryptData(value);
+        },
+        setItem: async (name, value) => {
+          const encrypted = await encryptData(value);
+          localStorage.setItem(name, encrypted);
+        },
+        removeItem: async (name) => localStorage.removeItem(name),
+      })),
     }
   )
 );
