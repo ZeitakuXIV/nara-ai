@@ -14,7 +14,6 @@ const parseIngredients = (ingredientsStr: string): Array<{ name: string; qty: st
   if (!ingredientsStr || typeof ingredientsStr !== 'string') return [];
   return ingredientsStr.split(',').map(part => {
     const trimmed = part.trim();
-    // Match something like "1 butir", "250 gr", "2 siung", "1/2 sdt", "0.5 kg" etc.
     const match = trimmed.match(/^(\d+(?:\/\d+)?(?:\.\d+)?\s*(?:kg|gr|g|siung|butir|sdm|sdt|ml|liter|bungkus|lembar|piring|gelas|biji|ruas|tangkai|buah)?)\s+(.+)$/i);
     if (match) {
       return {
@@ -23,7 +22,7 @@ const parseIngredients = (ingredientsStr: string): Array<{ name: string; qty: st
       };
     }
     return {
-      qty: 'Secukupnya',
+      qty: 'Adjusted',
       name: trimmed
     };
   });
@@ -35,25 +34,28 @@ const parseIngredients = (ingredientsStr: string): Array<{ name: string; qty: st
 const normalizeAiResponse = (result: any) => {
   if (!result || result.status !== 'success') return result;
 
+  // Combine primary_schedule and alternative_pool into a single pool
   const rawPool = [
     ...(result.primary_schedule || []),
     ...(result.alternative_pool || [])
   ];
 
   const normalizedPool = rawPool.map((item: any, i: number) => {
+    // 1. Resolve explanations into a string
     const scaling_reason = Array.isArray(item.explanations) 
       ? item.explanations.join(' ') 
       : (item.scaling_reason || 'Calibrated based on your province and biometrics.');
 
-    // Use structured ingredients if available from Python, else parse the raw string
+    // 2. Map ingredients (handle objects from Python list or raw strings)
     let finalIngredients = [];
     if (Array.isArray(item.ingredients) && item.ingredients.length > 0 && typeof item.ingredients[0] === 'object') {
        finalIngredients = item.ingredients.map((ing: any) => ({
          name: ing.item || ing.name || 'Ingredient',
-         qty: ing.qty || ing.amount || (ing.grams ? `${ing.grams}g` : 'Adjusted')
+         qty: ing.qty || ing.amount || (ing.grams ? `${ing.grams}g` : 'Scaled')
        }));
     } else {
-       finalIngredients = parseIngredients(item.ingredients_raw || item.ingredients);
+       // Fallback to parsing raw string if AI engine didn't provide a list
+       finalIngredients = parseIngredients(item.ingredients_raw || item.ingredients || "");
     }
 
     return {
@@ -67,7 +69,8 @@ const normalizeAiResponse = (result: any) => {
       carbs: Math.round(item.carbs_per_serving || item.carbs || 45),
       fat: Math.round(item.fat_per_serving || item.fat || 12),
       scaling_reason: scaling_reason,
-      instructions: item.instructions || 'Cooking steps are currently being analyzed by the expert system.',
+      // CRITICAL: Ensure instructions are captured
+      instructions: item.instructions || 'Detailed preparation steps are being processed by the NARA Reasoning Engine.',
       ingredients: finalIngredients
     };
   });
@@ -78,7 +81,6 @@ const normalizeAiResponse = (result: any) => {
   };
 };
 
-// Fallback Mock Data Generator (In case Python server is offline)
 const generateMockRecommendations = (goal: string) => {
   const recipes = [
     { title: 'Nasi Tim Ayam Kampung', calories: 345, protein: 22, carbs: 45, fat: 8, scaling_reason: 'Selected for high bioavailability.' },
@@ -91,7 +93,7 @@ const generateMockRecommendations = (goal: string) => {
     id: `mock_${i}_${Date.now()}`,
     image: `https://images.unsplash.com/photo-${['1596797038530-2c107229654b', '1546069901-ba9599a7e63c', '1512621776951-a57141f2eefd'][i % 3]}?q=80&w=800&auto=format&fit=crop`,
     ingredients: [{ name: 'Base Ingredient', qty: 'Scaled' }],
-    instructions: 'Prepare ingredients and cook according to standard protocol.'
+    instructions: 'Prepare fresh ingredients and cook according to NARA safety standards.'
   }));
 
   return {
@@ -147,10 +149,10 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pythonPayload),
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(12000) // 12s for heavy computations
       });
 
-      if (!aiResponse.ok) throw new Error(`AI Server Error: ${aiResponse.status}`);
+      if (!aiResponse.ok) throw new Error(`AI Server responded with ${aiResponse.status}`);
       const rawResult = await aiResponse.json();
       result = normalizeAiResponse(rawResult);
 

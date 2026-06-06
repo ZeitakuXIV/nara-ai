@@ -25,6 +25,7 @@ export default function Dashboard() {
 
   // SOURCE OF TRUTH: Fetch latest plan from Supabase
   const fetchLatestPlanFromDB = async () => {
+    setIsLoading(true);
     const identifier = store.userId || store.email;
     if (!identifier) {
       setIsLoading(false);
@@ -32,16 +33,17 @@ export default function Dashboard() {
     }
 
     try {
-      // 1. Resolve Profile ID
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('id')
-        .or(`id.eq."${store.userId}",email.eq."${store.email}"`)
+        .or(`email.eq."${store.email}",id.eq."${store.userId}"`)
         .single();
 
-      if (!profile) throw new Error("Profile not found");
+      if (!profile) {
+        setIsLoading(false);
+        return;
+      }
 
-      // 2. Fetch latest meal plan from Supabase table
       const { data: plan } = await supabase
         .from('meal_plans')
         .select('*')
@@ -50,11 +52,10 @@ export default function Dashboard() {
         .limit(1)
         .maybeSingle();
 
-      if (plan && plan.plan_data) {
-        // Sync Zustand store with DB data
+      if (plan && plan.plan_data && Array.isArray(plan.plan_data)) {
         store.setMealPlan(plan.plan_data);
       } else {
-        console.log("No stored plan found in Supabase.");
+        store.setMealPlan([]);
       }
     } catch (err) {
       console.error("Supabase Fetch Error:", err);
@@ -63,7 +64,6 @@ export default function Dashboard() {
     }
   };
 
-  // ON-DEMAND RE-SYNC: Force AI Engine to run and save to DB
   const handleManualSync = async () => {
     setIsSyncing(true);
     setError(null);
@@ -95,7 +95,6 @@ export default function Dashboard() {
       const result = await response.json();
 
       if (result.top_20_recipes) {
-        // Update local store (UI will react)
         store.setMealPlan(result.top_20_recipes);
       }
     } catch (err) {
@@ -107,25 +106,21 @@ export default function Dashboard() {
   };
 
   const handleResetPlan = async () => {
-    // 1. Clear cached meal plan
     store.setMealPlan([]);
-    // 2. Reset weekly index list to default
     setWeeklyPlanIndices([0, 1, 2, 3, 4, 5, 6]);
-    // 3. Fetch fresh recommendations
     await handleManualSync();
   };
 
-  // Initial Load
   useEffect(() => {
     fetchLatestPlanFromDB();
-  }, [store.email, store.userId]);
+  }, [store.email, store.userId, store.isOnboarded]);
 
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
   const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
 
-  const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
   const mealPool = store.mealPlan || [];
+  const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
   const currentMeal = mealPool.length > 0 ? mealPool[currentMealIndex % mealPool.length] : null;
 
   const chartData = currentMeal ? [
@@ -159,7 +154,6 @@ export default function Dashboard() {
 
   return (
     <div className="app-content bg-nara-light">
-      
       <header className="px-6 pt-8 pb-4 flex justify-between items-end z-10 shrink-0">
         <div>
            <p className="text-[10px] font-black text-nara-hunter uppercase tracking-[0.2em] mb-1 opacity-60">
@@ -168,17 +162,12 @@ export default function Dashboard() {
            <h1 className="text-3xl font-black text-nara-text tracking-tight">Nutrition Plan</h1>
         </div>
         <div className="flex gap-2">
-           <button onClick={handleResetPlan} disabled={isSyncing} title="Reset & Regenerate Plan" className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-rose-500 hover:text-rose-600 disabled:opacity-50">
-              <RotateCcw size={20} />
-           </button>
-           <button onClick={handleManualSync} disabled={isSyncing} title="Sync Plan" className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter disabled:opacity-50">
-              {isSyncing ? <Loader2 className="animate-spin" size={20} /> : <RefreshCw size={20} />}
-           </button>
+           <button onClick={handleResetPlan} disabled={isSyncing} className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-rose-500 disabled:opacity-50"><RotateCcw size={20} /></button>
+           <button onClick={handleManualSync} disabled={isSyncing} className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center border border-white active:scale-90 transition-all text-nara-hunter disabled:opacity-50">{isSyncing ? <Loader2 className="animate-spin" size={20} /> : <RefreshCw size={20} />}</button>
         </div>
       </header>
 
       <main className="px-6 flex-1 z-10 space-y-8 pb-40">
-        {/* Day Selector */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-2 px-2">
           {days.map((day, idx) => (
             <button key={day} onClick={() => setSelectedDayIndex(idx)} className={`flex flex-col items-center justify-center min-w-[70px] h-20 rounded-[28px] transition-all duration-300 border ${selectedDayIndex === idx ? 'bg-nara-hunter text-white shadow-float border-nara-hunter scale-105' : 'bg-white/50 text-nara-muted border-white/80'}`}>
@@ -188,7 +177,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Error Handling UI */}
         {error ? (
           (() => {
             try {
@@ -196,9 +184,7 @@ export default function Dashboard() {
               if (parsedError.type === 'safety_shield') {
                 return (
                   <div className="glass-container p-8 flex flex-col items-center justify-center text-center border-rose-500/30 bg-rose-500/5 shadow-xl relative overflow-hidden">
-                     <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500">
-                        <ShieldCheck size={32} />
-                     </div>
+                     <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500"><ShieldCheck size={32} /></div>
                      <h3 className="text-xl font-black text-rose-600 tracking-tight mb-2">NARA Safety Shield Active</h3>
                      <p className="text-[12px] text-rose-700/80 font-bold leading-relaxed mb-4">{parsedError.message}</p>
                      <div className="bg-white/80 border border-rose-100 rounded-3xl p-5 mb-6 text-left max-w-sm mx-auto">
@@ -207,18 +193,14 @@ export default function Dashboard() {
                         <span className="text-[8px] font-black uppercase text-slate-400 tracking-[0.2em] block mb-2">Medical Disclaimer</span>
                         <p className="text-[11px] text-slate-500 leading-relaxed italic">{parsedError.details}</p>
                      </div>
-                     <p className="text-[10px] text-slate-400 font-bold mb-6">Please update your profile target goals or biometrics to safety standards.</p>
                      <Link href="/profile" className="btn-primary w-full py-4 text-center justify-center">Update Health Identity</Link>
                   </div>
                 );
               }
             } catch (e) {}
-
             return (
               <div className="glass-container p-8 flex flex-col items-center justify-center text-center border-rose-200/40 bg-white/20">
-                 <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500">
-                    <AlertCircle size={32} />
-                 </div>
+                 <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500"><AlertCircle size={32} /></div>
                  <h3 className="text-lg font-black text-nara-text tracking-tight mb-2">Sync Interrupted</h3>
                  <p className="text-[11px] text-nara-muted font-bold uppercase tracking-wider mb-6">{error}</p>
                  <button onClick={handleManualSync} className="btn-primary py-4 px-10 shadow-lg">Retry Connection</button>
@@ -229,9 +211,7 @@ export default function Dashboard() {
           <div className="space-y-5">
             <div className="flex items-center justify-between px-1">
                 <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Utensils size={14} /> AI Recommendation</h2>
-                <button onClick={() => setIsSwapModalOpen(true)} className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all">
-                  <RefreshCw size={12} /> Swap Menu
-                </button>
+                <button onClick={() => setIsSwapModalOpen(true)} className="flex items-center gap-1.5 text-[10px] font-black text-nara-hunter uppercase bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm active:scale-95 transition-all"><RefreshCw size={12} /> Swap Menu</button>
             </div>
 
             <motion.div key={`${currentMeal.id}-${selectedDayIndex}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onClick={() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="relative w-full h-[400px] rounded-[48px] overflow-hidden shadow-soft border-4 border-white cursor-pointer group">
@@ -253,9 +233,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="glass-container p-12 flex flex-col items-center justify-center text-center bg-white/20">
-             <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6">
-                <Zap size={32} className="text-nara-hunter animate-pulse" />
-             </div>
+             <div className="w-16 h-16 bg-nara-hunter/10 rounded-full flex items-center justify-center mb-6"><Zap size={32} className="text-nara-hunter animate-pulse" /></div>
              <h3 className="text-xl font-black text-nara-text tracking-tight mb-2">Initialize Analysis</h3>
              <p className="text-[11px] text-nara-muted leading-relaxed max-w-[220px] font-bold uppercase tracking-wider">Your personal bio-signature hasn&apos;t been processed by the NARA engine yet.</p>
              <button onClick={handleManualSync} className="btn-primary mt-8 py-4 px-10 shadow-lg">Run On-Demand Sync</button>
@@ -264,7 +242,6 @@ export default function Dashboard() {
 
         {currentMeal && (
           <div className="space-y-6" ref={detailRef}>
-            {/* Macro Chart */}
             <div className="glass-container p-8 grid grid-cols-2 gap-4 shadow-xl">
                <div className="flex flex-col justify-center">
                   <h3 className="text-[11px] font-black text-nara-text mb-4 uppercase tracking-widest opacity-60">Macro Distribution</h3>
@@ -295,7 +272,6 @@ export default function Dashboard() {
                </div>
             </div>
 
-            {/* Rationale */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-7 rounded-[40px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-float relative overflow-hidden">
                <div className="flex items-center gap-2 mb-3">
                   <ShieldCheck size={18} className="text-nara-emerald" />
@@ -304,7 +280,6 @@ export default function Dashboard() {
                <p className="text-white/80 text-[14px] leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
             </motion.div>
 
-            {/* Ingredients */}
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-4">
@@ -324,14 +299,11 @@ export default function Dashboard() {
                </div>
             </div>
 
-            {/* Preparation Steps */}
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Preparation Steps</h3>
                <div className="space-y-6">
                   {currentMeal.instructions ? (
-                    <div className="text-sm leading-relaxed text-nara-text font-medium whitespace-pre-line">
-                       {currentMeal.instructions}
-                    </div>
+                    <div className="text-sm leading-relaxed text-nara-text font-medium whitespace-pre-line">{currentMeal.instructions}</div>
                   ) : (
                     <p className="text-xs text-nara-muted italic">Instruction data not provided by AI engine.</p>
                   )}

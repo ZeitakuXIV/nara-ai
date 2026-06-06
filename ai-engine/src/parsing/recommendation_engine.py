@@ -652,8 +652,6 @@ class NaraRecommender:
                 
             res = {
                 "title": r["title"],
-                "ingredients": r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "",
-                "instructions": r["instructions"] if "instructions" in r and pd.notna(r["instructions"]) else "",
                 "score": round(r["recommendation_score"] * 100, 1),
                 "food_category": cat,
                 "portion_scale_factor": scale_factor,
@@ -664,7 +662,7 @@ class NaraRecommender:
                 "density": density_val,
                 "regional_alignment_score": round(ras_val * 100, 1),
                 "source": r["source"],
-                "instructions": r["instructions"] if pd.notna(r["instructions"]) else "Steps being calculated...",
+                "instructions": r["instructions"] if pd.notna(r["instructions"]) else "Steps being analyzed by NARA engine...",
                 "ingredients_raw": r["ingredients"] if pd.notna(r["ingredients"]) else "",
                 "ingredients": ingredients,
                 "explanations": [
