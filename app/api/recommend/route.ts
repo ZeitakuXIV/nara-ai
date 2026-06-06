@@ -34,19 +34,17 @@ const parseIngredients = (ingredientsStr: string): Array<{ name: string; qty: st
 const normalizeAiResponse = (result: any) => {
   if (!result || result.status !== 'success') return result;
 
-  // Combine primary_schedule and alternative_pool into a single pool
   const rawPool = [
     ...(result.primary_schedule || []),
     ...(result.alternative_pool || [])
   ];
 
   const normalizedPool = rawPool.map((item: any, i: number) => {
-    // 1. Resolve explanations into a string
     const scaling_reason = Array.isArray(item.explanations) 
       ? item.explanations.join(' ') 
       : (item.scaling_reason || 'Calibrated based on your province and biometrics.');
 
-    // 2. Map ingredients (handle objects from Python list or raw strings)
+    // Use structured ingredients if available, else parse raw string
     let finalIngredients = [];
     if (Array.isArray(item.ingredients) && item.ingredients.length > 0 && typeof item.ingredients[0] === 'object') {
        finalIngredients = item.ingredients.map((ing: any) => ({
@@ -54,7 +52,6 @@ const normalizeAiResponse = (result: any) => {
          qty: ing.qty || ing.amount || (ing.grams ? `${ing.grams}g` : 'Scaled')
        }));
     } else {
-       // Fallback to parsing raw string if AI engine didn't provide a list
        finalIngredients = parseIngredients(item.ingredients_raw || item.ingredients || "");
     }
 
@@ -69,7 +66,6 @@ const normalizeAiResponse = (result: any) => {
       carbs: Math.round(item.carbs_per_serving || item.carbs || 45),
       fat: Math.round(item.fat_per_serving || item.fat || 12),
       scaling_reason: scaling_reason,
-      // CRITICAL: Ensure instructions are captured
       instructions: item.instructions || 'Detailed preparation steps are being processed by the NARA Reasoning Engine.',
       ingredients: finalIngredients
     };
@@ -149,19 +145,19 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pythonPayload),
-        signal: AbortSignal.timeout(12000) // 12s for heavy computations
+        signal: AbortSignal.timeout(12000)
       });
 
-      if (!aiResponse.ok) throw new Error(`AI Server responded with ${aiResponse.status}`);
+      if (!aiResponse.ok) throw new Error(`AI Server Error: ${aiResponse.status}`);
       const rawResult = await aiResponse.json();
       result = normalizeAiResponse(rawResult);
 
     } catch (fetchErr) {
-      console.warn("AI Engine unreachable. Using Safety Fallback. Error:", fetchErr);
+      console.warn("AI Engine connection failed. Using Safety Fallback. Error:", fetchErr);
       result = generateMockRecommendations(body.goal);
     }
 
-    // HANDLE SAFETY CUTOFF
+    // HANDLE SAFETY CUTOFF (Development logic)
     if (result.status === 'safety_cutoff_triggered' || result.status === 'safety_shield') {
       return NextResponse.json({
         status: 'safety_shield',
