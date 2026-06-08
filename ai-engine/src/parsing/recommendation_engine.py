@@ -214,6 +214,17 @@ def is_main_dish(title, ingredients_list) -> bool:
         'keripik', 'kripik', 'rempeyek',
         # Fritters & snacks
         'mendoan', 'bakwan',
+        # Indonesian street food snacks (jajanan pasar / jajanan kaki lima)
+        'sempol',       # skewered dough-meat snack
+        'cilok',        # chewy tapioca ball snack
+        'cireng',       # fried cassava starch snack
+        'batagor',      # fried tofu/bakso snack
+        'siomay',       # steamed dumpling street snack
+        'risoles',      # fried crepe roll snack
+        'pastel',       # fried pastry snack
+        'lemper',       # sticky rice roll snack
+        'tahu bulat',   # round fried tofu street snack
+        'tahu jeletot', # spicy stuffed fried tofu snack (not 'jeletot' alone — ayam geprek jeletot is a main dish)
         # Generic snack labels
         'jajanan', 'camilan', 'minuman',
     ]
