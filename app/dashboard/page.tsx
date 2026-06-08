@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useUserStore, Recipe } from '@/store/userStore';
-import { calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
+import { calculateBMI, calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
 import { supabase } from '@/utils/supabase';
 
 export default function Dashboard() {
@@ -96,9 +96,10 @@ export default function Dashboard() {
     }
   }, [store.mealPlan, store.isOnboarded]);
 
+  const bmi = useMemo(() => calculateBMI(store.weight, store.height), [store.weight, store.height]);
   const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
   const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
-  const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal), [tdee, store.goal]);
+  const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal, bmi, bmr), [tdee, store.goal, bmi, bmr]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
   // Strictly use the Local persistence (mealPlan) as default

@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Loader2,
   Download,
-  Activity
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { supabase } from '@/utils/supabase';
@@ -76,12 +77,16 @@ export default function Profile() {
 
   const handleDeployChanges = async () => {
     // CLINICAL CROSS-VALIDATION
-    if (store.goal === 'cutting' && bmi < 18.5) {
+    const normalizedGoal = store.goal?.toLowerCase() || '';
+    const isCutting = normalizedGoal === 'cutting' || normalizedGoal === 'weight_loss';
+    const isBulking = normalizedGoal === 'bulking' || normalizedGoal === 'muscle_gain';
+
+    if (isCutting && bmi < 18.5) {
       setClinicalError("Clinical Safety: BMI Anda < 18.5 (Underweight). Melakukan program Cutting (Defisit Kalori) sangat berbahaya. Pilih Maintenance atau Bulking.");
       setTimeout(() => setClinicalError(null), 8000);
       return;
     }
-    if (store.goal === 'bulking' && bmi >= 30.0) {
+    if (isBulking && bmi >= 30.0) {
       setClinicalError("Clinical Safety: BMI Anda >= 30.0 (Obese). Melakukan program Bulking (Surplus Kalori) sangat berbahaya bagi jantung. Fokus pada Cutting.");
       setTimeout(() => setClinicalError(null), 8000);
       return;

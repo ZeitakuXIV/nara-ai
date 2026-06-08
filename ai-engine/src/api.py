@@ -78,10 +78,29 @@ async def startup_event():
     global recommender, agent_runner, session_service
     recommender = NaraRecommender()
     
-    # Persistent SQLite session storage — survives request cycles within a deployment
-    # Note: Railway has ephemeral filesystem, so sessions reset on full redeploy.
-    # For cross-deployment persistence, swap db_url to a PostgreSQL connection string.
-    session_service = DatabaseSessionService(db_url="sqlite+aiosqlite:////tmp/nara_sessions.db")
+    # Database Session Storage
+    # The Google ADK Agent Runner requires a DatabaseSessionService to remember chat history.
+    # Without this, the chatbot would have amnesia on every single message.
+    
+    supabase_url = os.environ.get("DATABASE_URL")
+    
+    if supabase_url:
+        # PRODUCTION: Use Supabase PostgreSQL if DATABASE_URL is provided in .env
+        # Ensure it uses the asyncpg driver required by SQLAlchemy async engine
+        if supabase_url.startswith("postgresql://"):
+            supabase_url = supabase_url.replace("postgresql://", "postgresql+asyncpg://")
+        elif supabase_url.startswith("postgres://"):
+            supabase_url = supabase_url.replace("postgres://", "postgresql+asyncpg://")
+            
+        session_service = DatabaseSessionService(db_url=supabase_url)
+        print("🔗 NARA Chatbot: Connected to Supabase PostgreSQL for session memory.")
+    else:
+        # DEVELOPMENT/TESTING: Fallback to local SQLite file
+        # If you truly want "no saving" (wiped on restart), you can change this to: "sqlite+aiosqlite:///:memory:"
+        db_path = os.path.join(current_dir, "nara_sessions.db")
+        db_path_url = db_path.replace('\\', '/')
+        session_service = DatabaseSessionService(db_url=f"sqlite+aiosqlite:///{db_path_url}")
+        print("🔗 NARA Chatbot: Connected to Local SQLite for session memory.")
     
     agent_runner = Runner(
         agent=root_agent,

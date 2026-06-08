@@ -60,26 +60,17 @@ CLINICAL_RED_LINES = {
 
 def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, sex: str, activity_level: str, goal: str) -> dict:
     """
-    Calculates BMR via Mifflin-St Jeor, maps activity multipliers to TDEE,
-    and applies calorie targets and macro distributions based on goals.
-    Implements Adjusted Body Weight (ABW) for BMI >= 25.0 to mitigate overestimation bias.
+    Calculates BMR via Mifflin-St Jeor using Actual Body Weight,
+    maps activity multipliers to TDEE, and applies Stepped Deficit logic for safe weight loss.
     """
     height_m = height_cm / 100.0
     bmi = weight_kg / (height_m * height_m) if height_m > 0 else 0
-    calc_weight = weight_kg
-    using_abw = False
-    
-    if bmi >= 25.0:
-        # Clinical ABW formula: Ideal Weight at BMI 22 + 25% of excess weight
-        ideal_weight = 22.0 * (height_m ** 2)
-        calc_weight = ideal_weight + 0.25 * (weight_kg - ideal_weight)
-        using_abw = True
 
-    # Basal Metabolic Rate (BMR) using calc_weight
+    # Basal Metabolic Rate (BMR) using ACTUAL weight
     if sex.lower() == 'male':
-        bmr = 10.0 * calc_weight + 6.25 * height_cm - 5.0 * age_years + 5.0
+        bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age_years + 5.0
     else:
-        bmr = 10.0 * calc_weight + 6.25 * height_cm - 5.0 * age_years - 161.0
+        bmr = 10.0 * weight_kg + 6.25 * height_cm - 5.0 * age_years - 161.0
         
     # Activity Multipliers
     multipliers = {
@@ -101,13 +92,22 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     activity_factor = multipliers.get(activity_key, 1.2)
     tdee = bmr * activity_factor
     
-    # Calorie Target based on Goals
-    if goal.lower() == 'weight_loss':
-        cal_target = tdee - 500.0  # standard 500 kcal deficit
+    # Calorie Target based on Goals & Stepped Deficit
+    if goal.lower() == 'weight_loss' or goal.lower() == 'cutting':
+        if bmi < 25.0:
+            cal_target = tdee - 375.0 # Gentle deficit for normal weight
+        elif bmi <= 35.0:
+            cal_target = tdee - (tdee * 0.15) # 15% deficit for overweight/mild obesity
+        else:
+            cal_target = tdee - (tdee * 0.20) # 20% deficit for morbid obesity
+            
+        # Safety Guardrail: Never drop below BMR for extreme cases, or 1200 absolute minimum
+        cal_target = max(cal_target, bmr, 1200.0)
+        
         # Protein based on body weight (standard clinical: 1.2g - 1.5g per kg for weight loss to preserve muscle)
         protein_g = weight_kg * 1.2
         fat_pct, carb_pct = 0.25, 0.40 # Remaining macros
-    elif goal.lower() == 'muscle_gain':
+    elif goal.lower() == 'muscle_gain' or goal.lower() == 'bulking':
         cal_target = tdee + 400.0  # surplus
         protein_g = weight_kg * 1.8 # Higher for muscle synthesis
         fat_pct, carb_pct = 0.25, 0.40
@@ -132,7 +132,7 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         "protein_target_meal": round(protein_g / 3.0, 1),
         "fat_target_meal": round(fat_g / 3.0, 1),
         "carbohydrates_target_meal": round(carb_g / 3.0, 1),
-        "using_abw": using_abw
+        "using_abw": False
     }
 
 # ──────────────────────────────────────────────
@@ -556,10 +556,20 @@ class NaraRecommender:
             # Target scaling for protein
             sf_prot = t_prot / max(rec_prot_standard, 1.0)
             
-            # FAT CAP: Scaling factor must not push fat beyond 120% of meal target
-            sf_fat_cap = (t_fat * 1.2) / max(rec_fat_standard, 1.0)
+            # FAT CAP: Scaling factor must not push fat beyond target meal fat limits.
+            sf_fat_cap = (t_fat * 1.0) / max(rec_fat_standard, 0.1)
             
-            scale_factor = min(sf_prot, sf_fat_cap, 3.0) # Absolute max 3x
+            # Category absolute maximum scaling
+            if cat == 'red_meat':
+                abs_max_scale = 1.5  # Max 150g per meal
+            elif cat == 'poultry' or cat == 'fish_seafood':
+                abs_max_scale = 2.0  # Max 200g per meal
+            elif cat == 'plant_based':
+                abs_max_scale = 2.5  # Max 300g per meal
+            else:
+                abs_max_scale = 1.5
+            
+            scale_factor = min(sf_prot, sf_fat_cap, abs_max_scale)
             scale_factor = max(0.5, round(scale_factor, 1))
 
             scaled_cal = rec_cal_standard * scale_factor
@@ -574,26 +584,34 @@ class NaraRecommender:
                 veg_name = "Sayuran Hijau Rebus (Bayam/Sawi/Kangkung)"
                 v_cal, v_prot, v_fat, v_carb = 25, 2.0, 0.2, 4.0
 
-            # 5. DYNAMIC CARBS PAIRING with CLINICAL LIMIT
-            has_carb = (scaled_carb + v_carb) >= 25.0
-            carb_name = None
-            c_cal, c_prot, c_fat, c_carb, c_weight = 0, 0, 0, 0, 0
+            # 5. DYNAMIC CARBS PAIRING (Kultural: Wajib Nasi - CARB ANCHOR LOGIC)
+            prov_key = prov_display.lower()
+            if 'papua' in prov_key or 'maluku' in prov_key:
+                carb_name, b_cal, b_prot, b_fat, b_carb = "Singkong/Sagu", 120, 1.2, 0.2, 28
+            else:
+                carb_name, b_cal, b_prot, b_fat, b_carb = "Nasi Putih", 130, 2.7, 0.3, 28
             
-            if not has_carb:
-                prov_key = prov_display.lower()
-                if 'papua' in prov_key or 'maluku' in prov_key:
-                    carb_name, b_cal, b_prot, b_fat, b_carb = "Singkong/Sagu", 120, 1.2, 0.2, 28
-                else:
-                    carb_name, b_cal, b_prot, b_fat, b_carb = "Nasi Putih", 130, 2.7, 0.3, 28
+            cal_gap = t_cal - (scaled_cal + v_cal)
+            
+            # CARB ANCHOR & DENSITY LOGIC
+            # Jika user Underweight (BMI < 18.5), jangan paksa nasi berlebih (>150g) agar tidak mual.
+            # Alihkan kalori ke lauk utama (Energy Density).
+            height_m = user_profile.get("height_cm", 170.0) / 100.0
+            weight_kg = user_profile.get("weight_kg", 60.0)
+            curr_bmi = weight_kg / (height_m * height_m)
+            
+            if curr_bmi < 18.5:
+                max_carb_weight = 150.0
+            else:
+                max_carb_weight = 300.0
                 
-                cal_gap = t_cal - (scaled_cal + v_cal)
-                c_weight = min(200.0, max(50.0, cal_gap / (b_cal / 100.0)))
-                c_weight = round(c_weight, 0)
-                
-                c_cal = b_cal * (c_weight / 100.0)
-                c_prot = b_prot * (c_weight / 100.0)
-                c_fat = b_fat * (c_weight / 100.0)
-                c_carb = b_carb * (c_weight / 100.0)
+            c_weight = min(max_carb_weight, max(100.0, cal_gap / (b_cal / 100.0)))
+            c_weight = round(c_weight, 0)
+            
+            c_cal = b_cal * (c_weight / 100.0)
+            c_prot = b_prot * (c_weight / 100.0)
+            c_fat = b_fat * (c_weight / 100.0)
+            c_carb = b_carb * (c_weight / 100.0)
 
             # Final Totals (PER MEAL)
             total_cal = round(scaled_cal + v_cal + c_cal, 1)
@@ -607,29 +625,38 @@ class NaraRecommender:
             daily_fat = round(total_fat * 3, 1)
             daily_carb = round(total_carb * 3, 1)
             
+            # Hitung Margin of Error Asli
+            daily_target_cal = round(targets["caloric_target_daily"], 0)
+            moe_pct = abs(daily_target_cal - daily_cal) / max(daily_target_cal, 1.0)
+            
             # Explanations
-            portion_msg = f"Atur Porsi: Sajikan {scale_factor}x porsi ({int(scale_factor * base_weight_g)}g) {r['title']} (Sekali Makan)."
-            
+            piring_msg = f"🍽️ ISI PIRING SEKALI MAKAN:"
+            lauk_msg = f"• {int(scale_factor * base_weight_g)}g {r['title']} (sebagai lauk utama)."
             if veg_name:
-                fiber_msg = f"Sayuran: Tambahkan {veg_name} (Sekali Makan) untuk serat."
+                sayur_msg = f"• 100g {veg_name} (untuk asupan serat)."
             else:
-                fiber_msg = "Kaya Serat: Menu ini sudah mengandung sayuran."
+                sayur_msg = f"• (Menu ini sudah kaya akan sayuran)."
             
-            if carb_name:
-                carb_msg = f"Karbohidrat: Sandingkan dengan {int(c_weight)}g {carb_name} (Sekali Makan)."
-            else:
-                carb_msg = "Karbohidrat: Menu ini sudah memiliki sumber energi utama."
+            carb_note = ""
+            if curr_bmi < 18.5 and c_weight >= 150:
+                carb_note = " (Porsi nasi dibatasi agar Anda tidak mual/kekenyangan)."
+            karbo_msg = f"• {int(c_weight)}g {carb_name} (sebagai sumber energi).{carb_note}"
 
-            daily_summary = (
-                f"TOTAL ASUPAN HARIAN (3x Makan): "
-                f"Energi: {daily_cal} kkal, "
-                f"Protein: {daily_prot}g, "
-                f"Lemak: {daily_fat}g, "
-                f"Karbohidrat: {daily_carb}g."
-            )
+            total_harian_msg = f"📈 JIKA DIMAKAN 3X SEHARI (Pagi, Siang, Malam):"
+            kalkulasi_msg = f"Anda akan mendapatkan {daily_cal} kkal (Protein: {daily_prot}g, Karbo: {daily_carb}g, Lemak: {daily_fat}g)."
+            
+            # UNDERWEIGHT SPECIAL INSTRUCTION
+            if curr_bmi < 18.5:
+                freq_msg = "💡 TIPS KLINIS: Karena porsi per piring cukup padat, disarankan membagi total menu ini menjadi 5-6 kali makan kecil sepanjang hari agar lebih mudah dicerna."
+            elif moe_pct <= 0.05:
+                freq_msg = f"🎯 TARGET SANGAT AKURAT: Menu ini menutupi target {daily_target_cal} kkal Anda dengan akurasi tinggi (MoE < 5%)."
+            else:
+                freq_msg = f"⚖️ STATUS KALORI: Menu ini mencakup {daily_cal} kkal dari target harian Anda ({daily_target_cal} kkal)."
 
             res = {
                 "title": r["title"],
+                "ingredients": r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "",
+                "instructions": r["instructions"] if "instructions" in r and pd.notna(r["instructions"]) else "",
                 "score": round(r["recommendation_score"] * 100, 1),
                 "food_category": cat,
                 "portion_scale_factor": scale_factor,
@@ -638,11 +665,13 @@ class NaraRecommender:
                 "fat_per_serving": total_fat,
                 "carbs_per_serving": total_carb,
                 "explanations": [
-                    portion_msg,
-                    fiber_msg,
-                    carb_msg,
-                    daily_summary,
-                    f"Catatan: Menu ini dimakan 3x sehari (Pagi, Siang, Malam) untuk mencapai target gizi harian Anda."
+                    piring_msg,
+                    lauk_msg,
+                    sayur_msg,
+                    karbo_msg,
+                    total_harian_msg,
+                    kalkulasi_msg,
+                    freq_msg
                 ]
             }
             if day_label: res["day"] = day_label

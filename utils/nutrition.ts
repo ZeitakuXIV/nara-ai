@@ -30,17 +30,7 @@ export function getBmiStatus(bmi: number) {
 export function calculateBMR(weight: number, heightCm: number, age: number, gender: 'male' | 'female' | null): number {
   if (!weight || !heightCm || !age || !gender) return 0;
   
-  const heightM = heightCm / 100;
-  const bmi = weight / (heightM * heightM);
-  let calculationWeight = weight;
-  
-  if (bmi >= 25.0) {
-    // Clinical ABW formula: Ideal Weight at BMI 22 + 25% of excess weight
-    const idealWeight = 22.0 * (heightM * heightM);
-    calculationWeight = idealWeight + 0.25 * (weight - idealWeight);
-  }
-  
-  let bmr = (10 * calculationWeight) + (6.25 * heightCm) - (5 * age);
+  let bmr = (10 * weight) + (6.25 * heightCm) - (5 * age);
   bmr += gender === 'male' ? 5 : -161;
   return Math.round(bmr);
 }
@@ -56,22 +46,37 @@ export function calculateTDEE(bmr: number, activity: string | null): number {
 
 /**
  * Generates Target Macros (Protein, Carbs, Fat) based on TDEE and User Goal.
- * Applies the NARA Ethical Guardrail logic.
+ * Applies Stepped Deficit, Gradual Underweight Surplus, and NARA Ethical Guardrails.
  */
-export function calculateTargetMacros(tdee: number, goal: string | null) {
+export function calculateTargetMacros(tdee: number, goal: string | null, bmi: number = 22, bmr: number = 1500) {
   let targetCalories = tdee;
 
   // Goal adjustment to match backend AI mapping
   const normalizedGoal = goal?.toLowerCase().trim() || 'maintenance';
   
   if (normalizedGoal === 'cutting' || normalizedGoal === 'weight_loss') {
-    targetCalories -= 500; // Moderate caloric deficit
+    if (bmi < 25.0) {
+      targetCalories -= 375; // Gentle deficit
+    } else if (bmi <= 35.0) {
+      targetCalories -= (tdee * 0.15); // 15% deficit
+    } else {
+      targetCalories -= (tdee * 0.20); // 20% deficit
+    }
   } else if (normalizedGoal === 'bulking' || normalizedGoal === 'muscle_gain') {
-    targetCalories += 400; // Moderate caloric surplus (match python backend)
+    // GRADUAL SURPLUS FOR UNDERWEIGHT
+    if (bmi < 17.0) {
+      targetCalories += 250; // Small surplus to prevent Refeeding Syndrome
+    } else {
+      targetCalories += 400; // Standard surplus
+    }
   }
 
-  // Prevent dangerously low calories (Ethical Guardrail)
-  if (targetCalories < 1200) targetCalories = 1200;
+  // Prevent dangerously low calories (Ethical Guardrail) - never below BMR for extreme, absolute min 1200
+  if (normalizedGoal === 'cutting' || normalizedGoal === 'weight_loss') {
+      targetCalories = Math.max(targetCalories, bmr, 1200);
+  } else {
+      targetCalories = Math.max(targetCalories, 1200);
+  }
 
   // Standard Macronutrient Distribution: 30% Protein, 40% Carbs, 30% Fat
   // Protein: 4 kcal/g | Carbs: 4 kcal/g | Fat: 9 kcal/g
@@ -80,7 +85,7 @@ export function calculateTargetMacros(tdee: number, goal: string | null) {
   const fatGrams = Math.round((targetCalories * 0.30) / 9);
 
   return {
-    calories: targetCalories,
+    calories: Math.round(targetCalories),
     protein: proteinGrams,
     carbs: carbsGrams,
     fat: fatGrams,
