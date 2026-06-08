@@ -312,6 +312,10 @@ class NaraRecommender:
                 
         # Pre-calculate recipe commodity profiles to speed up regional alignment queries
         print("⚡ Pre-building recipe regional commodity indexes ...")
+        # Ingredients that are processed/flour derivatives of a staple — should NOT
+        # be counted as the staple grain itself (e.g. tepung beras ≠ beras konsumsi).
+        _FLOUR_EXCLUSIONS = {'beras', 'singkong', 'ubi jalar'}
+
         self.recipe_commodities = []
         for ingredients in self.parsed_ingredients:
             comp_map = {com_name: 0.0 for com_name in COMMODITY_KEYWORDS.keys()}
@@ -320,6 +324,9 @@ class NaraRecommender:
                 grams = float(ing.get('grams', 0.0))
                 for com_name, keywords in COMMODITY_KEYWORDS.items():
                     if any(kw in item for kw in keywords):
+                        # Skip flour/starch forms of staple grains (tepung beras, tepung singkong, etc.)
+                        if com_name in _FLOUR_EXCLUSIONS and 'tepung' in item:
+                            continue
                         comp_map[com_name] += grams
             self.recipe_commodities.append(comp_map)
             
