@@ -72,8 +72,10 @@ const mapActivity = (level: string) => {
 const mapGoal = (goal: string) => {
   const mapping: Record<string, string> = {
     'cutting': 'weight_loss',
+    'weight_loss': 'weight_loss', // Tangkap jika frontend sudah mengirim 'weight_loss'
     'maintenance': 'maintenance',
-    'bulking': 'muscle_gain'
+    'bulking': 'muscle_gain',
+    'muscle_gain': 'muscle_gain'  // Tangkap jika frontend sudah mengirim 'muscle_gain'
   };
   return mapping[goal] || 'maintenance';
 };

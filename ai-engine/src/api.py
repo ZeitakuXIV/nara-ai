@@ -108,25 +108,33 @@ def recommend(request: RecommendationRequest):
 
 def format_meal_plan_for_agent(meal_plan) -> str:
     """
-    Formats the meal plan (list of Recipe dicts from Supabase/Zustand)
-    into a clean readable list for the agent's context window.
-    No biometric data is included — ethical decision.
+    Formats the 7-day meal plan into a structured readable string for the agent.
+    Includes day labels, meal names, and daily nutritional totals.
     """
     if not meal_plan:
         return ""
     
-    if isinstance(meal_plan, list):
-        lines = []
-        for i, recipe in enumerate(meal_plan[:20]):  # Cap at 20 recipes to avoid token bloat
-            if isinstance(recipe, dict):
-                name = recipe.get("title") or recipe.get("name") or "Unknown Recipe"
-                cals = recipe.get("calories", "?")
-                lines.append(f"  {i+1}. {name} (~{cals} kcal)")
-            elif isinstance(recipe, str):
-                lines.append(f"  {i+1}. {recipe}")
-        return "\n".join(lines) if lines else ""
+    lines = ["BERIKUT ADALAH RENCANA MAKAN 7 HARI USER (MENU DIMAKAN 3X SEHARI):"]
     
-    # Fallback: already a string or dict with days
+    if isinstance(meal_plan, list):
+        # Check if it's the 7-day primary schedule format
+        for item in meal_plan:
+            if isinstance(item, dict):
+                day = item.get("day")
+                title = item.get("title") or item.get("name")
+                cals = item.get("calories_per_serving") or item.get("calories")
+                prot = item.get("protein_per_serving") or item.get("protein")
+                
+                if day:
+                    # Daily totals (3x servings)
+                    total_cals = round(float(cals) * 3, 1) if cals else "?"
+                    total_prot = round(float(prot) * 3, 1) if prot else "?"
+                    lines.append(f"- {day}: {title} (Total Harian: ~{total_cals} kkal, Protein: ~{total_prot}g)")
+                else:
+                    lines.append(f"- {title} (~{cals} kkal)")
+                    
+        return "\n".join(lines)
+    
     return json.dumps(meal_plan, ensure_ascii=False)
 
 @app.post("/chat")

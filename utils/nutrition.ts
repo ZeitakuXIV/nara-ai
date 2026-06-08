@@ -61,11 +61,13 @@ export function calculateTDEE(bmr: number, activity: string | null): number {
 export function calculateTargetMacros(tdee: number, goal: string | null) {
   let targetCalories = tdee;
 
-  // Goal adjustment
-  if (goal === 'cutting') {
+  // Goal adjustment to match backend AI mapping
+  const normalizedGoal = goal?.toLowerCase().trim() || 'maintenance';
+  
+  if (normalizedGoal === 'cutting' || normalizedGoal === 'weight_loss') {
     targetCalories -= 500; // Moderate caloric deficit
-  } else if (goal === 'bulking') {
-    targetCalories += 500; // Moderate caloric surplus
+  } else if (normalizedGoal === 'bulking' || normalizedGoal === 'muscle_gain') {
+    targetCalories += 400; // Moderate caloric surplus (match python backend)
   }
 
   // Prevent dangerously low calories (Ethical Guardrail)

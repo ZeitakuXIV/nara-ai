@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
   Ruler, 
@@ -15,7 +15,8 @@ import {
   Target,
   ChevronDown,
   Loader2,
-  Download
+  Download,
+  Activity
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { supabase } from '@/utils/supabase';
@@ -35,6 +36,7 @@ export default function Profile() {
   const store = useUserStore();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [clinicalError, setClinicalError] = useState<string | null>(null);
 
   const handleDownloadData = () => {
     // UU PDP No. 27/2022 Art. 5 Compliance: User data portability right
@@ -73,6 +75,19 @@ export default function Profile() {
   }, [store.height, store.weight]);
 
   const handleDeployChanges = async () => {
+    // CLINICAL CROSS-VALIDATION
+    if (store.goal === 'cutting' && bmi < 18.5) {
+      setClinicalError("Clinical Safety: BMI Anda < 18.5 (Underweight). Melakukan program Cutting (Defisit Kalori) sangat berbahaya. Pilih Maintenance atau Bulking.");
+      setTimeout(() => setClinicalError(null), 8000);
+      return;
+    }
+    if (store.goal === 'bulking' && bmi >= 30.0) {
+      setClinicalError("Clinical Safety: BMI Anda >= 30.0 (Obese). Melakukan program Bulking (Surplus Kalori) sangat berbahaya bagi jantung. Fokus pada Cutting.");
+      setTimeout(() => setClinicalError(null), 8000);
+      return;
+    }
+
+    setClinicalError(null);
     setIsSaving(true);
     try {
       // 1. Persist updated biometrics to Supabase
@@ -82,6 +97,8 @@ export default function Profile() {
           height: store.height,
           age: store.age,
           location: store.location,
+          activity_level: store.activity,
+          dietary_goal: store.goal
         }).eq('id', store.userId);
       }
 
@@ -187,11 +204,65 @@ export default function Profile() {
                        </div>
                     </div>
                  </div>
+
+                 <div className="h-[1px] w-full bg-slate-100" />
+
+                 <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-nara-muted opacity-60">
+                       <Activity size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Daily Activity</span>
+                    </div>
+                    <div className="relative">
+                       <select 
+                         value={store.activity || ''} 
+                         onChange={(e) => store.setBiometrics({ activity: e.target.value })} 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 text-sm font-bold text-nara-text appearance-none focus:outline-none focus:ring-2 focus:ring-nara-hunter/20 transition-all"
+                       >
+                         <option value="sedentary">Sedentary (Jarang Olahraga)</option>
+                         <option value="light">Lightly Active (1-3 hari/minggu)</option>
+                         <option value="moderate">Moderately Active (3-5 hari/minggu)</option>
+                         <option value="extra">Highly Active (Setiap Hari)</option>
+                       </select>
+                       <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown size={18} />
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="h-[1px] w-full bg-slate-100" />
+
+                 <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-nara-muted opacity-60">
+                       <Target size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Diet Goal</span>
+                    </div>
+                    <div className="relative">
+                       <select 
+                         value={store.goal || ''} 
+                         onChange={(e) => store.setBiometrics({ goal: e.target.value })} 
+                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-5 text-sm font-bold text-nara-text appearance-none focus:outline-none focus:ring-2 focus:ring-nara-hunter/20 transition-all"
+                       >
+                         <option value="weight_loss">Cutting (Menurunkan BB)</option>
+                         <option value="maintenance">Maintenance (Menjaga BB)</option>
+                         <option value="muscle_gain">Bulking (Menaikkan BB/Otot)</option>
+                       </select>
+                       <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown size={18} />
+                       </div>
+                    </div>
+                 </div>
               </div>
            </div>
         </section>
 
         <div className="flex flex-col gap-4 pt-6">
+           <AnimatePresence>
+             {clinicalError && (
+               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 flex items-start gap-3 mb-2">
+                 <AlertCircle size={20} className="shrink-0 mt-0.5" />
+                 <p className="text-[11px] font-bold leading-relaxed">{clinicalError}</p>
+               </motion.div>
+             )}
+           </AnimatePresence>
+           
            <button
              onClick={handleDeployChanges}
              disabled={isSaving}

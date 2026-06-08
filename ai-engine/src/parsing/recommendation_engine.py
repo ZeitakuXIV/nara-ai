@@ -104,18 +104,25 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     # Calorie Target based on Goals
     if goal.lower() == 'weight_loss':
         cal_target = tdee - 500.0  # standard 500 kcal deficit
-        protein_pct, fat_pct, carb_pct = 0.30, 0.30, 0.40
+        # Protein based on body weight (standard clinical: 1.2g - 1.5g per kg for weight loss to preserve muscle)
+        protein_g = weight_kg * 1.2
+        fat_pct, carb_pct = 0.25, 0.40 # Remaining macros
     elif goal.lower() == 'muscle_gain':
-        cal_target = tdee + 400.0  # surplus for lean mass gain
-        protein_pct, fat_pct, carb_pct = 0.35, 0.25, 0.40
+        cal_target = tdee + 400.0  # surplus
+        protein_g = weight_kg * 1.8 # Higher for muscle synthesis
+        fat_pct, carb_pct = 0.25, 0.40
     else:  # weight maintenance
         cal_target = tdee
-        protein_pct, fat_pct, carb_pct = 0.20, 0.30, 0.50
+        protein_g = weight_kg * 1.0 # Maintenance baseline
+        fat_pct, carb_pct = 0.30, 0.45
         
-    # Translate target calories to gram targets (P: 4 kcal/g, F: 9 kcal/g, C: 4 kcal/g)
-    protein_g = (cal_target * protein_pct) / 4.0
+    # Validation: Ensure protein calories don't exceed 40% of total calories (safety)
+    prot_cals = protein_g * 4.0
+    if prot_cals > (cal_target * 0.45):
+        protein_g = (cal_target * 0.45) / 4.0
+
     fat_g = (cal_target * fat_pct) / 9.0
-    carb_g = (cal_target * carb_pct) / 4.0
+    carb_g = (cal_target - (protein_g * 4.0) - (fat_g * 9.0)) / 4.0
     
     return {
         "bmr": round(bmr, 1),
@@ -178,36 +185,37 @@ def classify_recipe_category(ingredients_list, title) -> str:
         
     return 'other'
 
-def is_main_dish(title, ingredients_list) -> bool:
+def is_main_dish(title, ingredients_list, protein_per_100g=0) -> bool:
     title_clean = str(title).lower().strip()
     
-    # Exclude desserts, snacks, candies, and sweet treats
-    dessert_kws = [
-        'cookie', 'cookies', 'treat', 'treats', 'candy', 'candies', 'dessert', 'desserts', 
-        'marshmallow', 'marshmallows', 'scotcharoo', 'scotcharoos', 'krispies', 'krispy',
-        'crispy treat', 'crispy treats', 'cake', 'cakes', 'pie', 'pies', 'donut', 'donuts', 
-        'pudding', 'puddings', 'fudge', 'brownie', 'brownies', 'muffin', 'muffins', 
-        'caramel', 'chocolate', 'cupcake', 'cupcakes', 'truffle', 'tart', 'tarts', 
-        'popcorn', 'pretzel', 'pretzels', 'chex mix', 'frosting', 'icing', 'syrup',
-        'jam', 'pancake', 'pancakes', 'waffle', 'waffles', 'sweet', 'sweets', 'bars', 'bark',
-        'cut-out', 'cut-outs', 'cutout', 'cutouts', 'biscuit', 'biscuits', 'pastry', 'pastries',
-        'scone', 'scones', 'shortbread', 'gingerbread', 'snickerdoodle'
+    # 1. Perketat filter cemilan/snack (termasuk istilah Indonesia)
+    snack_kws = [
+        'cookie', 'cookies', 'treat', 'candy', 'dessert', 'marshmallow', 'scotcharoo', 
+        'cake', 'pie', 'donut', 'pudding', 'fudge', 'brownie', 'brownies', 'muffin', 'muffins', 'caramel', 
+        'cupcake', 'truffle', 'tart', 'tarts', 'popcorn', 'pretzel', 'syrup', 'jam', 'pancake', 
+        'waffle', 'sweet', 'bars', 'bark', 'biscuit', 'pastry', 'scone', 'kerupuk', 
+        'kripik', 'keripik', 'gorengan', 'bakwan', 'cireng', 'cilok', 'cimol', 'rempeyek',
+        'peyek', 'makanan ringan', 'snack', 'camilan', 'cemilan', 'wafer', 'cokelat',
+        'manisan', 'es krim', 'ice cream', 'sorbet', 'bolu', 'lapis legit', 'donat'
     ]
-    if any(kw in title_clean for kw in dessert_kws):
+    if any(kw in title_clean for kw in snack_kws):
         return False
         
-    # Exclude side sauces, raw dressings, glazes, and seasonings
+    # 2. Syarat Protein Minimum untuk Makanan Utama
+    if protein_per_100g < 2.0:
+        if not any(x in title_clean for x in ['ayam', 'daging', 'sapi', 'ikan', 'telur', 'tempe', 'tahu', 'seafood']):
+            return False
+
+    # 3. Exclude saus, bumbu, atau minuman
     condiment_kws = [
         'sauce', 'gravy', 'dressing', 'marinade', 'rub', 'dip', 'syrup', 'seasoning',
-        'salsa', 'pesto', 'glaze', 'vinaigrette', 'spread', 'paste'
+        'salsa', 'pesto', 'glaze', 'vinaigrette', 'spread', 'paste', 'sambal', 'bumbu'
     ]
     if any(title_clean.endswith(kw) or f" {kw}" in title_clean for kw in condiment_kws):
-        # Unless it is clearly a main meat/fish dish in sauce
-        if not any(x in title_clean for x in ['chicken', 'beef', 'meat', 'fish', 'stew', 'curry']):
+        if not any(x in title_clean for x in ['chicken', 'beef', 'meat', 'fish', 'stew', 'curry', 'ayam', 'daging', 'ikan']):
             return False
             
-    # Exclude basic beverages
-    beverage_kws = ['drink', 'juice', 'smoothie', 'shake', 'cocktail', 'punch', 'tea', 'coffee', 'cider']
+    beverage_kws = ['drink', 'juice', 'smoothie', 'shake', 'cocktail', 'punch', 'tea', 'coffee', 'cider', 'es ', 'wedang', 'jus ', 'teh ', 'kopi ']
     if any(kw in title_clean for kw in beverage_kws):
         return False
         
@@ -242,13 +250,27 @@ class NaraRecommender:
     def __init__(self):
         print("📂 NaraRecommender: Loading master recipe database ...")
         self.df = pd.read_csv(RECIPE_CSV)
-        # Bug #2 Fix: Filter servings outliers (>100) and low structured match rate (<0.3)
+        # Bug Fix: Filter servings outliers (>100), low match rate, AND nutritional anomalies
+        # (e.g., Red meat recipes with suspiciously low fat indicating bad data)
         initial_len = len(self.df)
+        
+        # Buat mask filter
+        valid_servings = self.df['estimated_servings'] <= 100
+        valid_match = self.df['structured_match_rate'] >= 0.3
+        
+        # Buang resep "koyor" (urat/lemak) yang terekam salah memiliki lemak rendah
+        # dan buang resep berlabel daging sapi tapi fat < 1g (tidak masuk akal)
+        suspicious_meat_mask = (self.df['title'].str.lower().str.contains('koyor|gajih|jeroan|tetelan'))
+        suspicious_fat_mask = (self.df['title'].str.lower().str.contains('sapi|kambing')) & (self.df['Recipe Fat'] < 2.0)
+        
         self.df = self.df[
-            (self.df['estimated_servings'] <= 100) & 
-            (self.df['structured_match_rate'] >= 0.3)
+            valid_servings & 
+            valid_match & 
+            (~suspicious_meat_mask) & 
+            (~suspicious_fat_mask)
         ].reset_index(drop=True)
-        print(f"🧹 Filtered recipe database: {initial_len} -> {len(self.df)} (removed {initial_len - len(self.df)} recipes with estimated_servings > 100 or structured_match_rate < 0.3)")
+        
+        print(f"🧹 Filtered recipe database: {initial_len} -> {len(self.df)} (removed {initial_len - len(self.df)} anomali)")
         self.allergen_df = pd.read_csv(ALLERGEN_CSV)
         
         # Load regional consumption database
@@ -426,18 +448,23 @@ class NaraRecommender:
         carb_diff = np.abs(recipe_carb - t_carb) / max(t_carb, 1.0)
         macro_score = 1.0 / (1.0 + prot_diff + fat_diff + carb_diff)
         
-        # C. Combined Expert Scoring (BPS Regional alignment is weighted at 45%)
+        # C. Combined Expert Scoring (Nutritional Integrity is Priority: 85%)
+        # Regional alignment is now a tie-breaker/bonus (15%)
         normalized_density = recipe_density / (np.max(recipe_density) + 1e-5)
         
         final_scores = (
-            0.20 * cal_score +
-            0.15 * macro_score +
-            0.20 * normalized_density +
-            0.45 * recipe_ras
+            0.30 * cal_score +
+            0.30 * macro_score +
+            0.25 * normalized_density +
+            0.15 * recipe_ras
         )
         
         filtered_df["recommendation_score"] = final_scores
         filtered_df["ras_score"] = recipe_ras
+        
+        # Guardrail: Disqualify recipes where base fat is already > 125% of meal target
+        fat_mask = filtered_df["Recipe Fat"] * 3.0 <= (t_fat * 1.25)
+        filtered_df = filtered_df[fat_mask]
         
         # Sort candidates descending
         candidates = filtered_df.sort_values(by="recommendation_score", ascending=False)
@@ -451,7 +478,7 @@ class NaraRecommender:
             ingredients = self.parsed_ingredients[idx_val]
             
             # CSP Constraint: Only recommend realistic main dishes for meal prep
-            if not is_main_dish(r['title'], ingredients):
+            if not is_main_dish(r['title'], ingredients, r['Recipe Protein']):
                 continue
                 
             cat = classify_recipe_category(ingredients, r['title'])
@@ -472,7 +499,7 @@ class NaraRecommender:
                 ingredients = self.parsed_ingredients[idx_val]
                 
                 # Check main dish constraint here as well
-                if not is_main_dish(r['title'], ingredients):
+                if not is_main_dish(r['title'], ingredients, r['Recipe Protein']):
                     continue
                     
                 cat = classify_recipe_category(ingredients, r['title'])
@@ -509,151 +536,100 @@ class NaraRecommender:
         days_name = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
         def format_recipe(r, cat, ingredients, day_label=None):
-            # 1. Determine base serving weight based on category
+            # 1. Base Serving Weights
             if cat in ['red_meat', 'poultry', 'fish_seafood']:
                 base_weight_g = 100.0
             elif cat == 'plant_based':
                 base_weight_g = 120.0
-            elif cat == 'vegetable':
-                base_weight_g = 100.0
             else:
-                base_weight_g = 300.0
+                base_weight_g = 200.0
 
-            # 2. Scale database per-100g values to the standard base serving size
+            # 2. Scale database per-100g values
             rec_cal_standard = r["Recipe Caloric Value"] * (base_weight_g / 100.0)
             rec_prot_standard = r["Recipe Protein"] * (base_weight_g / 100.0)
             rec_fat_standard = r["Recipe Fat"] * (base_weight_g / 100.0)
             rec_carb_standard = r["Recipe Carbohydrates"] * (base_weight_g / 100.0)
             
-            density_val = r["Recipe Nutrition Density"]
-            ras_val = r["ras_score"]
-            
-            # Check if this is a standalone protein/side dish (lauk-pauk) lacking carbohydrate
-            has_carb = rec_carb_standard >= 20.0
-            
-            # 3. Portion scaling multiplier calculation
+            # 3. CLINICAL LOGIC: Portion Scaling with FAT CAP
             is_protein_dish = cat in ['red_meat', 'poultry', 'fish_seafood', 'plant_based']
             
-            if is_protein_dish:
-                # Scale primarily based on protein target of the meal (t_prot)
-                scale_factor = t_prot / max(rec_prot_standard, 1.0)
-                scale_factor = round(scale_factor, 1)
-                # Cap to safety bounds for protein [0.5, 1.2]
-                scale_factor = max(0.5, min(1.2, scale_factor))
-            else:
-                # Scale based on calorie target
-                scale_factor = t_cal / max(rec_cal_standard, 1.0)
-                scale_factor = round(scale_factor, 1)
-                # Cap to safety bounds [0.5, 1.5]
-                scale_factor = max(0.5, min(1.5, scale_factor))
+            # Target scaling for protein
+            sf_prot = t_prot / max(rec_prot_standard, 1.0)
+            
+            # FAT CAP: Scaling factor must not push fat beyond 120% of meal target
+            sf_fat_cap = (t_fat * 1.2) / max(rec_fat_standard, 1.0)
+            
+            scale_factor = min(sf_prot, sf_fat_cap, 3.0) # Absolute max 3x
+            scale_factor = max(0.5, round(scale_factor, 1))
 
             scaled_cal = rec_cal_standard * scale_factor
             scaled_prot = rec_prot_standard * scale_factor
             scaled_fat = rec_fat_standard * scale_factor
             scaled_carb = rec_carb_standard * scale_factor
 
-            # 4. Pair with a carbohydrate staple and scale it dynamically to close the calorie gap
+            # 4. MANDATORY VEGETABLES
+            veg_name = None
+            v_cal, v_prot, v_fat, v_carb = 0, 0, 0, 0
+            if cat != 'vegetable':
+                veg_name = "Sayuran Hijau Rebus (Bayam/Sawi/Kangkung)"
+                v_cal, v_prot, v_fat, v_carb = 25, 2.0, 0.2, 4.0
+
+            # 5. DYNAMIC CARBS PAIRING with CLINICAL LIMIT
+            has_carb = (scaled_carb + v_carb) >= 25.0
             carb_name = None
-            carb_cal = 0.0
-            carb_prot = 0.0
-            carb_fat = 0.0
-            carb_carbs = 0.0
-            carb_weight_g = 0.0
-            full_carb_name = None
+            c_cal, c_prot, c_fat, c_carb, c_weight = 0, 0, 0, 0, 0
             
             if not has_carb:
-                prov_key = prov_display.strip().lower()
-                prov_consumption = self.consumption_map.get(prov_key, {})
-                if not prov_consumption and self.consumption_map:
-                    prov_consumption = self.consumption_map.get("nasional", {})
-                
-                beras_rate = max(1.0, prov_consumption.get("beras", 80.0))
-                ubi_rate = prov_consumption.get("ubi jalar", 0.0)
-                singkong_rate = prov_consumption.get("singkong", 0.0)
-                sagu_rate = prov_consumption.get("sagu", 0.0)
-                
-                ubi_ratio = ubi_rate / beras_rate
-                singkong_ratio = singkong_rate / beras_rate
-                sagu_ratio = sagu_rate / beras_rate
-                
-                if ubi_ratio >= 0.20:
-                    carb_name = "Ubi Jalar Rebus"
-                    base_carb_cal = 76.0
-                    base_carb_prot = 1.3
-                    base_carb_fat = 0.1
-                    base_carb_carbs = 17.7
-                elif singkong_ratio >= 0.15 or sagu_ratio >= 0.10:
-                    carb_name = "Singkong Rebus"
-                    base_carb_cal = 120.0
-                    base_carb_prot = 1.2
-                    base_carb_fat = 0.2
-                    base_carb_carbs = 28.0
+                prov_key = prov_display.lower()
+                if 'papua' in prov_key or 'maluku' in prov_key:
+                    carb_name, b_cal, b_prot, b_fat, b_carb = "Singkong/Sagu", 120, 1.2, 0.2, 28
                 else:
-                    carb_name = "Nasi Putih"
-                    base_carb_cal = 130.0
-                    base_carb_prot = 2.7
-                    base_carb_fat = 0.3
-                    base_carb_carbs = 28.0
+                    carb_name, b_cal, b_prot, b_fat, b_carb = "Nasi Putih", 130, 2.7, 0.3, 28
                 
-                # Close the remaining calorie target gap using the carbohydrate staple
-                cal_deficit = t_cal - scaled_cal
-                carb_weight_g = cal_deficit / (base_carb_cal / 100.0)
-                carb_weight_g = round(carb_weight_g, 0)
+                cal_gap = t_cal - (scaled_cal + v_cal)
+                c_weight = min(200.0, max(50.0, cal_gap / (b_cal / 100.0)))
+                c_weight = round(c_weight, 0)
                 
-                # Apply safety boundaries [50g, 250g]
-                if carb_weight_g < 50.0:
-                    carb_weight_g = 0.0
-                else:
-                    carb_weight_g = min(250.0, carb_weight_g)
-                    carb_cal = base_carb_cal * (carb_weight_g / 100.0)
-                    carb_prot = base_carb_prot * (carb_weight_g / 100.0)
-                    carb_fat = base_carb_fat * (carb_weight_g / 100.0)
-                    carb_carbs = base_carb_carbs * (carb_weight_g / 100.0)
-                    full_carb_name = f"{carb_name} ({int(carb_weight_g)}g)"
-            else:
-                carb_weight_g = 0.0
-                full_carb_name = None
+                c_cal = b_cal * (c_weight / 100.0)
+                c_prot = b_prot * (c_weight / 100.0)
+                c_fat = b_fat * (c_weight / 100.0)
+                c_carb = b_carb * (c_weight / 100.0)
+
+            # Final Totals (PER MEAL)
+            total_cal = round(scaled_cal + v_cal + c_cal, 1)
+            total_prot = round(scaled_prot + v_prot + c_prot, 1)
+            total_fat = round(scaled_fat + v_fat + c_fat, 1)
+            total_carb = round(scaled_carb + v_carb + c_carb, 1)
             
-            # Formulate explanations
-            total_cal = round(scaled_cal + carb_cal, 1)
-            total_prot = round(scaled_prot + carb_prot, 1)
-            total_fat = round(scaled_fat + carb_fat, 1)
-            total_carb = round(scaled_carb + carb_carbs, 1)
+            # Daily Totals (3x MEALS)
+            daily_cal = round(total_cal * 3, 0)
+            daily_prot = round(total_prot * 3, 1)
+            daily_fat = round(total_fat * 3, 1)
+            daily_carb = round(total_carb * 3, 1)
             
-            cal_diff = round(total_cal - t_cal, 1)
+            # Explanations
+            portion_msg = f"Atur Porsi: Sajikan {scale_factor}x porsi ({int(scale_factor * base_weight_g)}g) {r['title']} (Sekali Makan)."
             
-            portion_desc = f"Atur Porsi: Sajikan {scale_factor:.1f}x porsi ({round(scale_factor * base_weight_g, 0):.0f}g) {r['title']}"
-            if full_carb_name:
-                scale_reason = f"{portion_desc} disandingkan dengan {full_carb_name} sebagai karbohidrat utama ({cal_diff:+.1f} kkal dari target)."
+            if veg_name:
+                fiber_msg = f"Sayuran: Tambahkan {veg_name} (Sekali Makan) untuk serat."
             else:
-                scale_reason = f"{portion_desc} sebagai hidangan lengkap satu piring ({cal_diff:+.1f} kkal dari target)."
+                fiber_msg = "Kaya Serat: Menu ini sudah mengandung sayuran."
             
-            prot_err = abs(total_prot - t_prot) / max(t_prot, 1.0)
-            if prot_err < 0.15:
-                macro_reason = "Proporsi Protein ideal untuk mendukung pemulihan otot dan metabolisme."
-            elif total_prot > t_prot:
-                macro_reason = f"Kaya Protein ({total_prot}g), memenuhi target protein makan Anda untuk mendukung metabolisme."
+            if carb_name:
+                carb_msg = f"Karbohidrat: Sandingkan dengan {int(c_weight)}g {carb_name} (Sekali Makan)."
             else:
-                macro_reason = f"Makronutrisi seimbang (P: {total_prot}g, C: {total_carb}g)."
-                
-            if density_val > 1.5:
-                density_reason = f"Kepadatan gizi mikro tinggi ({density_val:.2f}), kaya akan Zat Besi, Kalsium, & Vitamin penting."
-            else:
-                density_reason = f"Gizi mikro harian tercukupi ({density_val:.2f})."
-                
-            allergen_reason = f"Aman: Bebas dari alergen Anda: {', '.join(user_allergies) if user_allergies else 'none'}."
-            
-            if ras_val > 0.6:
-                regional_reason = f"Pangan Lokal: Sangat selaras dengan konsumsi di {prov_display} (komoditas utama daerah)."
-            elif ras_val > 0.2:
-                regional_reason = f"Ketersediaan: Menggunakan bahan pangan pokok yang mudah didapat di {prov_display}."
-            else:
-                regional_reason = "Menggunakan bahan pokok standar nasional."
-                
+                carb_msg = "Karbohidrat: Menu ini sudah memiliki sumber energi utama."
+
+            daily_summary = (
+                f"TOTAL ASUPAN HARIAN (3x Makan): "
+                f"Energi: {daily_cal} kkal, "
+                f"Protein: {daily_prot}g, "
+                f"Lemak: {daily_fat}g, "
+                f"Karbohidrat: {daily_carb}g."
+            )
+
             res = {
                 "title": r["title"],
-                "ingredients": r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "",
-                "instructions": r["instructions"] if "instructions" in r and pd.notna(r["instructions"]) else "",
                 "score": round(r["recommendation_score"] * 100, 1),
                 "food_category": cat,
                 "portion_scale_factor": scale_factor,
@@ -661,19 +637,15 @@ class NaraRecommender:
                 "protein_per_serving": total_prot,
                 "fat_per_serving": total_fat,
                 "carbs_per_serving": total_carb,
-                "density": density_val,
-                "regional_alignment_score": round(ras_val * 100, 1),
-                "source": r["source"],
                 "explanations": [
-                    scale_reason,
-                    macro_reason,
-                    density_reason,
-                    allergen_reason,
-                    regional_reason
+                    portion_msg,
+                    fiber_msg,
+                    carb_msg,
+                    daily_summary,
+                    f"Catatan: Menu ini dimakan 3x sehari (Pagi, Siang, Malam) untuk mencapai target gizi harian Anda."
                 ]
             }
-            if day_label:
-                res["day"] = day_label
+            if day_label: res["day"] = day_label
             return res
 
         primary_output = []
@@ -732,7 +704,7 @@ def run_demo():
         for rec in res1["primary_schedule"]:
             print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
             print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
-            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}% | Density: {rec['density']:.2f}")
+            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}%")
             print(f"     🔍 AI Rationale:")
             for exp in rec["explanations"]:
                 print(f"       👉 {exp}")

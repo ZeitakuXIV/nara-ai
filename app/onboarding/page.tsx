@@ -22,6 +22,7 @@ const INDONESIAN_PROVINCES = [
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [clinicalError, setClinicalError] = useState<string | null>(null);
   const [isProvModalOpen, setIsProvModalOpen] = useState(false);
   const router = useRouter();
 
@@ -47,8 +48,22 @@ export default function Onboarding() {
   const isAtRisk = bmi < 17.0 && bmi > 0;
 
   const handleGeneratePlan = async () => {
+    // CLINICAL CROSS-VALIDATION
+    const currentBmi = calculateBMI(store.weight, store.height);
+    if (store.goal === 'cutting' && currentBmi < 18.5) {
+      setClinicalError("Clinical Safety: BMI Anda < 18.5 (Underweight). Melakukan program Cutting (Defisit Kalori) dalam kondisi ini berbahaya secara medis. Harap pilih Maintenance atau Bulking.");
+      setTimeout(() => setClinicalError(null), 8000);
+      return;
+    }
+    if (store.goal === 'bulking' && currentBmi >= 30.0) {
+      setClinicalError("Clinical Safety: BMI Anda >= 30.0 (Obese). Melakukan program Bulking (Surplus Kalori) meningkatkan risiko kardiovaskular. Fokuslah pada penurunan lemak (Cutting) terlebih dahulu.");
+      setTimeout(() => setClinicalError(null), 8000);
+      return;
+    }
+
     setStep(5);
     setIsGenerating(true);
+    setClinicalError(null);
 
     try {
       // 1. Save Profile to Supabase (Persistence)
