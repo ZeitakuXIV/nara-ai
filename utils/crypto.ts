@@ -42,7 +42,7 @@ function hexToBuf(hexString: string): ArrayBuffer {
  * Encrypts plaintext string using AES-GCM 256.
  * Returns formatted ciphertext string "hexIV:hexCiphertext".
  */
-export async function encryptData(plaintext: string, secret: string = "NARA_AI_SECRET_KEY"): Promise<string> {
+export async function encryptData(plaintext: string, secret: string = process.env.NEXT_PUBLIC_NARA_ENCRYPT_SECRET ?? "NARA_AI_SECRET_KEY"): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     return plaintext;
   }
@@ -69,7 +69,7 @@ export async function encryptData(plaintext: string, secret: string = "NARA_AI_S
 /**
  * Decrypts formatted ciphertext string "hexIV:hexCiphertext" using AES-GCM 256.
  */
-export async function decryptData(ciphertext: string, secret: string = "NARA_AI_SECRET_KEY"): Promise<string> {
+export async function decryptData(ciphertext: string, secret: string = process.env.NEXT_PUBLIC_NARA_ENCRYPT_SECRET ?? "NARA_AI_SECRET_KEY"): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     return ciphertext;
   }

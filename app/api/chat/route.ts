@@ -7,44 +7,53 @@ const PYTHON_MICROSERVICE_URL =
   process.env.NEXT_PUBLIC_AI_ENGINE_URL ||
   'http://127.0.0.1:8000';
 
+export const maxDuration = 30;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, context, email } = body;
+    const { message, context, email, userId: clientUserId } = body;
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // 1. Fetch user profile and meal plan from Supabase to provide real context
+    // 1. Use userId sent directly from the client (Supabase auth UID).
+    //    Fall back to email lookup only for legacy clients that don't send userId.
+    //    Never fall back to 'anonymous' — that would share a session across all users.
+    let userId = clientUserId as string | null;
     let mealPlan = null;
-    let userId = 'anonymous';
 
-    if (email) {
-      try {
-        const { data: profile } = await supabase
+    try {
+      if (!userId && email) {
+        // Legacy path: resolve userId from email
+        const { data: profileRow } = await supabase
           .from('user_profiles')
           .select('id')
           .eq('email', email)
           .maybeSingle();
-
-        if (profile) {
-          userId = profile.id;
-          const { data: latestPlan } = await supabase
-            .from('meal_plans')
-            .select('plan_data')
-            .eq('user_id', profile.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (latestPlan) {
-            mealPlan = latestPlan.plan_data;
-          }
-        }
-      } catch (dbErr) {
-        console.warn("Supabase context fetch failed. Continuing with context parameters from frontend.", dbErr);
+        if (profileRow) userId = profileRow.id;
       }
+
+      if (userId) {
+        const { data: latestPlan } = await supabase
+          .from('meal_plans')
+          .select('plan_data')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestPlan) mealPlan = latestPlan.plan_data;
+      }
+    } catch (dbErr) {
+      console.warn("Supabase context fetch failed. Continuing with client-side meal plan.", dbErr);
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User identity could not be resolved. Please log in again." },
+        { status: 401 }
+      );
     }
 
     // 2. Prepare payload for Python AI-Engine Chatbot
@@ -58,11 +67,12 @@ export async function POST(req: Request) {
       }
     };
 
-    // 3. Forward to Python Nara Agent
+    // 3. Forward to Python Nara Agent (30s timeout — Gemini can be slow on cold start)
     const aiResponse = await fetch(`${PYTHON_MICROSERVICE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(chatPayload),
+      signal: AbortSignal.timeout(25000),
     });
 
     if (!aiResponse.ok) {

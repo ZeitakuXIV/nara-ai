@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       'sedentary': 'sedentary',
       'light': 'lightly_active',
       'moderate': 'moderately_active',
-      'extra': 'very_active'
+      'extra': 'extra_active'
     };
 
     const goalMap: Record<string, string> = {
