@@ -567,8 +567,15 @@ class NaraRecommender:
                 # Scale primarily based on protein target of the meal (t_prot)
                 scale_factor = t_prot / max(rec_prot_standard, 1.0)
                 scale_factor = round(scale_factor, 1)
-                # Cap to safety bounds for protein [0.5, 1.2]
-                scale_factor = max(0.5, min(1.2, scale_factor))
+                # Cap to safety bounds for protein [0.5, 2.0]
+                # Upper bound: 2.0× = 200g fish/meat or 240g plant-based — a realistic adult portion
+                scale_factor = max(0.5, min(2.0, scale_factor))
+                # Secondary cap: protein scaling must not cause the protein dish alone to exceed the
+                # full calorie target. When cal/protein ratio is high (e.g. deep-fried tofu), scaling
+                # for protein would overshoot calories — cap at 1.0× t_cal instead.
+                if rec_cal_standard > 0 and rec_cal_standard * scale_factor > t_cal:
+                    scale_factor = round(t_cal / rec_cal_standard, 1)
+                    scale_factor = max(0.5, scale_factor)
             else:
                 # Scale based on calorie target
                 scale_factor = t_cal / max(rec_cal_standard, 1.0)
@@ -629,11 +636,11 @@ class NaraRecommender:
                 carb_weight_g = cal_deficit / (base_carb_cal / 100.0)
                 carb_weight_g = round(carb_weight_g, 0)
                 
-                # Apply safety boundaries [50g, 250g]
+                # Apply safety boundaries [50g, 350g]
                 if carb_weight_g < 50.0:
                     carb_weight_g = 0.0
                 else:
-                    carb_weight_g = min(250.0, carb_weight_g)
+                    carb_weight_g = min(350.0, carb_weight_g)
                     carb_cal = base_carb_cal * (carb_weight_g / 100.0)
                     carb_prot = base_carb_prot * (carb_weight_g / 100.0)
                     carb_fat = base_carb_fat * (carb_weight_g / 100.0)
