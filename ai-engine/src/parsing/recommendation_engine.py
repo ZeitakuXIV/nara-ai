@@ -6,6 +6,7 @@ data with Explainable AI (XAI) justifications and a CSP 7-Day Diverse Meal Plann
 """
 
 import os
+import re
 import json
 import time
 import collections
@@ -111,6 +112,10 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
     else:  # weight maintenance
         cal_target = tdee
         protein_pct, fat_pct, carb_pct = 0.20, 0.30, 0.50
+
+    # Clinical minimum calorie floor (WHO guidelines)
+    min_calories = 1500.0 if sex.lower() == 'male' else 1200.0
+    cal_target = max(cal_target, min_calories)
         
     # Translate target calories to gram targets (P: 4 kcal/g, F: 9 kcal/g, C: 4 kcal/g)
     protein_g = (cal_target * protein_pct) / 4.0
@@ -195,7 +200,26 @@ def is_main_dish(title, ingredients_list) -> bool:
     ]
     if any(kw in title_clean for kw in dessert_kws):
         return False
-        
+
+    # Indonesian desserts, snacks, and beverages
+    # Excludes only unambiguous non-main-dish terms; 'bubur' and 'roti' omitted to avoid
+    # false positives (Bubur Ayam and Roti Jala are valid main dishes).
+    indonesian_dessert_kws = [
+        # Traditional desserts & sweet snacks
+        'klepon', 'onde', 'serabi', 'kolak', 'wedang', 'cincau',
+        'es krim', 'lapis legit', 'kue kering', 'kue basah',
+        'lupis', 'wajik', 'nagasari', 'getuk', 'cenil', 'cucur', 'apem',
+        'putu', 'donat',
+        # Chips & crackers
+        'keripik', 'kripik', 'rempeyek',
+        # Fritters & snacks
+        'mendoan', 'bakwan',
+        # Generic snack labels
+        'jajanan', 'camilan', 'minuman',
+    ]
+    if any(kw in title_clean for kw in indonesian_dessert_kws):
+        return False
+
     # Exclude side sauces, raw dressings, glazes, and seasonings
     condiment_kws = [
         'sauce', 'gravy', 'dressing', 'marinade', 'rub', 'dip', 'syrup', 'seasoning',
@@ -238,6 +262,11 @@ def load_env_indonesian_only() -> bool:
                 print(f"⚠️ Warning: Failed to read .env at {path}: {e}")
     return False
 
+def _norm_prov(s: str) -> str:
+    """Normalize province name: collapse internal whitespace, strip, lowercase."""
+    return re.sub(r'\s+', ' ', str(s)).strip().lower()
+
+
 class NaraRecommender:
     def __init__(self):
         print("📂 NaraRecommender: Loading master recipe database ...")
@@ -260,7 +289,7 @@ class NaraRecommender:
         # Map consumption: self.consumption_map[province][commodity] = consumption_val
         self.consumption_map = collections.defaultdict(dict)
         for _, r in self.latest_consumption.iterrows():
-            prov = str(r['Provinsi']).strip().lower()
+            prov = _norm_prov(r['Provinsi'])
             com = str(r['Komoditas']).strip().lower()
             val = float(r['Konsumsi_Pangan'])
             self.consumption_map[prov][com] = val
@@ -388,7 +417,7 @@ class NaraRecommender:
         n_filtered = len(self.df) - len(filtered_df)
         
         # ── 4. Provincial Food Consumption Scoring (Regional Alignment) ──
-        province_name = user_profile.get("province", "").strip().lower()
+        province_name = _norm_prov(user_profile.get("province", ""))
         prov_consumption = self.consumption_map.get(province_name, self.consumption_map.get("nasional", {}))
         if not prov_consumption and self.consumption_map:
             # Fallback to national or first province in map
@@ -562,7 +591,7 @@ class NaraRecommender:
             full_carb_name = None
             
             if not has_carb:
-                prov_key = prov_display.strip().lower()
+                prov_key = _norm_prov(prov_display)
                 prov_consumption = self.consumption_map.get(prov_key, {})
                 if not prov_consumption and self.consumption_map:
                     prov_consumption = self.consumption_map.get("nasional", {})
