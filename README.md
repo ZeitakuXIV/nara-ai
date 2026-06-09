@@ -90,9 +90,9 @@ N.A.R.A is not a replacement for clinical consultation. It includes an autonomou
 ---
 
 ## 👨‍💻 Engineering Team
-- **M Nurrizal Zid Maulana** – Lead Systems Architect
-- **Sammy Farrel Zebua** – AI Engine & Optimization
+- **M Nurrizal Zid Maulana** – AI Engine & Optimization
+- **Sammy Farrel Zebua** – Lead Systems Architect
 - **Valensius Alven** – Full-Stack & UI/UX Engineering
 
 ---
-*Developed at Universitas Padjadjaran — AI Study Program.*
+*Developed at Universitas Padjadjaran — Informatics Engineering Study Program.*
