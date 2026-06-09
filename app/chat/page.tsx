@@ -51,6 +51,7 @@ export default function Chatbot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsg,
+          userId: store.userId,
           email: store.email,
           // mealPlan from store acts as client-side fallback if Supabase fetch fails server-side
           // No biometrics are sent — ethical decision, keep personal health data off the agent
