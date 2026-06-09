@@ -85,8 +85,21 @@ def ca(delivered, target):
     return max(0.0, 1.0 - abs(delivered - target) / max(target, 1.0))
 
 
-def mb(delivered_prot, target_prot):
-    return max(0.0, 1.0 - abs(delivered_prot - target_prot) / max(target_prot, 1.0))
+def mb_all(dp, df, dc, tp, tf, tc):
+    """Macro Balance: average accuracy across protein, fat, and carbohydrates."""
+    p = max(0.0, 1.0 - abs(dp - tp) / max(tp, 1.0))
+    f = max(0.0, 1.0 - abs(df - tf) / max(tf, 1.0))
+    c = max(0.0, 1.0 - abs(dc - tc) / max(tc, 1.0))
+    return (p + f + c) / 3.0
+
+
+def clinical_safety(cal, prot, fat, floor_cal, t_prot, t_fat):
+    """1.0 if meal satisfies all 3 clinical constraints, 0.0 otherwise.
+    Constraints: calorie floor, fat cap (<=125% target), min protein (>=70% target)."""
+    ok_cal  = cal  >= floor_cal
+    ok_fat  = fat  <= t_fat * 1.25
+    ok_prot = prot >= t_prot * 0.70
+    return 1.0 if (ok_cal and ok_fat and ok_prot) else 0.0
 
 
 def greedy_format(row, cat, t_cal, t_prot):
@@ -94,22 +107,31 @@ def greedy_format(row, cat, t_cal, t_prot):
     Reserve 155 kcal for veg (25) + minimum nasi (100g = 130) so the full meal
     hits t_cal, not just the raw recipe component."""
     bw = base_weight(cat)
-    rc = row['Recipe Caloric Value'] * (bw / 100.0)
-    rp = row['Recipe Protein'] * (bw / 100.0)
+    rc  = row['Recipe Caloric Value']      * (bw / 100.0)
+    rp  = row['Recipe Protein']            * (bw / 100.0)
+    rf  = row['Recipe Fat']                * (bw / 100.0)
+    rch = row['Recipe Carbohydrates']      * (bw / 100.0)
 
-    # Scale recipe to leave room for mandatory veg + min nasi
     cal_for_recipe = max(t_cal - 155.0, t_cal * 0.5)
     sf = max(0.5, min(2.0, round(cal_for_recipe / max(rc, 1.0), 1)))
-    sc = rc * sf
-    sp = rp * sf
+    sc  = rc  * sf
+    sp  = rp  * sf
+    sf_ = rf  * sf
+    sch = rch * sf
 
-    veg_cal, veg_prot = 25.0, 2.0
+    veg_cal, veg_prot, veg_fat, veg_carb = 25.0, 2.0, 0.2, 4.0
     cal_gap = t_cal - sc - veg_cal
-    nasi_g = min(300.0, max(100.0, cal_gap / 1.30))
+    nasi_g    = min(300.0, max(100.0, cal_gap / 1.30))
     nasi_cal  = 130.0 * (nasi_g / 100.0)
     nasi_prot =   2.7 * (nasi_g / 100.0)
+    nasi_fat  =   0.3 * (nasi_g / 100.0)
+    nasi_carb =  28.0 * (nasi_g / 100.0)
 
-    return sc + veg_cal + nasi_cal, sp + veg_prot + nasi_prot
+    total_cal  = sc  + veg_cal  + nasi_cal
+    total_prot = sp  + veg_prot + nasi_prot
+    total_fat  = sf_ + veg_fat  + nasi_fat
+    total_carb = sch + veg_carb + nasi_carb
+    return total_cal, total_prot, total_fat, total_carb
 
 
 # ─────────────────────────────────────────────────────────────
@@ -127,7 +149,12 @@ def main():
     )
     t_cal  = targets['caloric_target_meal']
     t_prot = targets['protein_target_meal']
-    print(f"Targets/meal: {t_cal:.1f} kcal | P: {t_prot:.1f}g")
+    t_fat  = targets['fat_target_meal']
+    t_carb = targets['carbohydrates_target_meal']
+    # Calorie floor per meal (sex-based: 1600M / 1400F, split across 3 meals)
+    min_daily = 1600.0 if PROFILE['sex'].lower() == 'male' else 1400.0
+    floor_cal  = min_daily / 3.0
+    print(f"Targets/meal: {t_cal:.1f} kcal | P: {t_prot:.1f}g | F: {t_fat:.1f}g | C: {t_carb:.1f}g | Floor: {floor_cal:.1f} kcal")
 
     prov_key = _norm_prov(PROFILE['province'])
     prov_consumption = engine.consumption_map.get(prov_key, engine.consumption_map.get('nasional', {}))
@@ -145,9 +172,10 @@ def main():
     gn_meals = gn_res['primary_schedule']
 
     gn_ca  = np.mean([ca(m['calories_per_serving'], t_cal) for m in gn_meals])
-    gn_mb  = np.mean([mb(m['protein_per_serving'],  t_prot) for m in gn_meals])
+    gn_mb  = np.mean([mb_all(m['protein_per_serving'], m['fat_per_serving'], m['carbs_per_serving'], t_prot, t_fat, t_carb) for m in gn_meals])
     gn_ra  = np.mean([m['regional_alignment_score'] / 100.0 for m in gn_meals])
     gn_nd  = np.mean([m['density'] / max_density for m in gn_meals])
+    gn_cs  = np.mean([clinical_safety(m['calories_per_serving'], m['protein_per_serving'], m['fat_per_serving'], floor_cal, t_prot, t_fat) for m in gn_meals])
     gn_score = sum(m['score'] for m in gn_meals)
 
     # ── 1b. NARA + Local Search ───────────────────────────────
@@ -156,9 +184,10 @@ def main():
     nara_meals = nara_res['primary_schedule']
 
     nara_ca  = np.mean([ca(m['calories_per_serving'], t_cal) for m in nara_meals])
-    nara_mb  = np.mean([mb(m['protein_per_serving'],  t_prot) for m in nara_meals])
+    nara_mb  = np.mean([mb_all(m['protein_per_serving'], m['fat_per_serving'], m['carbs_per_serving'], t_prot, t_fat, t_carb) for m in nara_meals])
     nara_ra  = np.mean([m['regional_alignment_score'] / 100.0 for m in nara_meals])
     nara_nd  = np.mean([m['density'] / max_density for m in nara_meals])
+    nara_cs  = np.mean([clinical_safety(m['calories_per_serving'], m['protein_per_serving'], m['fat_per_serving'], floor_cal, t_prot, t_fat) for m in nara_meals])
     nara_score = sum(m['score'] for m in nara_meals)
     nara_cals = [m['calories_per_serving'] for m in nara_meals]
 
@@ -181,59 +210,64 @@ def main():
         if len(greedy_sel) >= 7:
             break
 
-    g_cals, g_prots, g_ras, g_nd = [], [], [], []
+    g_cals, g_prots, g_fats, g_carbs, g_ras, g_nd = [], [], [], [], [], []
     for idx, row, cat, nras in greedy_sel:
-        gc, gp = greedy_format(row, cat, t_cal, t_prot)
-        g_cals.append(gc)
-        g_prots.append(gp)
+        gc, gp, gf, gch = greedy_format(row, cat, t_cal, t_prot)
+        g_cals.append(gc); g_prots.append(gp)
+        g_fats.append(gf); g_carbs.append(gch)
         g_ras.append(nras)
         g_nd.append(row['Recipe Nutrition Density'] / max_density)
 
-    greedy_ca = np.mean([ca(c, t_cal)  for c in g_cals])
-    greedy_mb = np.mean([mb(p, t_prot) for p in g_prots])
+    greedy_ca = np.mean([ca(c, t_cal) for c in g_cals])
+    greedy_mb = np.mean([mb_all(p, f, c, t_prot, t_fat, t_carb) for p, f, c in zip(g_prots, g_fats, g_carbs)])
     greedy_ra = np.mean(g_ras)
     greedy_nd = np.mean(g_nd)
+    greedy_cs = np.mean([clinical_safety(c, p, f, floor_cal, t_prot, t_fat) for c, p, f in zip(g_cals, g_prots, g_fats)])
 
     # ── 3. Random (n=500) ─────────────────────────────────────
     print(f"Running Random baseline (n={N_RANDOM}) ...")
-    r_ca_all, r_mb_all, r_ra_all, r_nd_all = [], [], [], []
+    r_ca_all, r_mb_all, r_ra_all, r_nd_all, r_cs_all = [], [], [], [], []
     r_cals_all = []
 
     pidx = list(range(len(pool_aug)))
     for _ in range(N_RANDOM):
         chosen = rng.sample(pidx, min(7, len(pidx)))
-        tc, tp, tr, tn = [], [], [], []
+        tc, tp, tf, tch, tr, tn = [], [], [], [], [], []
         for pi in chosen:
             idx, row, cat, nras = pool_aug[pi]
             bw = base_weight(cat)
-            rc = row['Recipe Caloric Value'] * (bw / 100.0)
-            rp = row['Recipe Protein']      * (bw / 100.0)
-            tc.append(rc); tp.append(rp)
+            rc  = row['Recipe Caloric Value'] * (bw / 100.0)
+            rp  = row['Recipe Protein']       * (bw / 100.0)
+            rf  = row['Recipe Fat']           * (bw / 100.0)
+            rch = row['Recipe Carbohydrates'] * (bw / 100.0)
+            tc.append(rc); tp.append(rp); tf.append(rf); tch.append(rch)
             tr.append(nras)
             tn.append(row['Recipe Nutrition Density'] / max_density)
-        r_ca_all.append(np.mean([ca(c, t_cal)  for c in tc]))
-        r_mb_all.append(np.mean([mb(p, t_prot) for p in tp]))
+        r_ca_all.append(np.mean([ca(c, t_cal) for c in tc]))
+        r_mb_all.append(np.mean([mb_all(p, f, c, t_prot, t_fat, t_carb) for p, f, c in zip(tp, tf, tch)]))
         r_ra_all.append(np.mean(tr))
         r_nd_all.append(np.mean(tn))
+        r_cs_all.append(np.mean([clinical_safety(c, p, f, floor_cal, t_prot, t_fat) for c, p, f in zip(tc, tp, tf)]))
         r_cals_all.append(tc)
 
     random_ca = np.mean(r_ca_all)
     random_mb = np.mean(r_mb_all)
     random_ra = np.mean(r_ra_all)
     random_nd = np.mean(r_nd_all)
+    random_cs = np.mean(r_cs_all)
     random_cals_mean = np.mean(r_cals_all, axis=0)  # shape (7,)
 
-    print(f"\nNARA  : CA={nara_ca*100:.1f}%  MB={nara_mb*100:.1f}%  RA={nara_ra*100:.1f}%  ND={nara_nd*100:.1f}%")
-    print(f"Greedy: CA={greedy_ca*100:.1f}%  MB={greedy_mb*100:.1f}%  RA={greedy_ra*100:.1f}%  ND={greedy_nd*100:.1f}%")
-    print(f"Random: CA={random_ca*100:.1f}%  MB={random_mb*100:.1f}%  RA={random_ra*100:.1f}%  ND={random_nd*100:.1f}%")
+    print(f"\nNARA  : CA={nara_ca*100:.1f}%  RA={nara_ra*100:.1f}%  ND={nara_nd*100:.1f}%  CS={nara_cs*100:.1f}%")
+    print(f"Greedy: CA={greedy_ca*100:.1f}%  RA={greedy_ra*100:.1f}%  ND={greedy_nd*100:.1f}%  CS={greedy_cs*100:.1f}%")
+    print(f"Random: CA={random_ca*100:.1f}%  RA={random_ra*100:.1f}%  ND={random_nd*100:.1f}%  CS={random_cs*100:.1f}%")
 
     # ─────────────────────────────────────────────────────────
     # Chart 1 — Multi-Dimensional Algorithm Comparison
     # ─────────────────────────────────────────────────────────
-    metrics    = ['Caloric\nAccuracy', 'Macro\nBalance', 'Regional\nAlignment', 'Nutrition\nDensity']
-    nara_vals  = [nara_ca,   nara_mb,   nara_ra,   nara_nd  ]
-    greedy_vals= [greedy_ca, greedy_mb, greedy_ra, greedy_nd]
-    random_vals= [random_ca, random_mb, random_ra, random_nd]
+    metrics    = ['Caloric\nAccuracy', 'Clinical\nSafety', 'Regional\nAlignment', 'Nutrition\nDensity']
+    nara_vals  = [nara_ca,   nara_cs,   nara_ra,   nara_nd  ]
+    greedy_vals= [greedy_ca, greedy_cs, greedy_ra, greedy_nd]
+    random_vals= [random_ca, random_cs, random_ra, random_nd]
 
     x   = np.arange(len(metrics))
     w   = 0.25
@@ -274,7 +308,7 @@ def main():
     )
 
     footnote = ('CA = Caloric Accuracy | '
-                'MB = Macro Balance (protein) | '
+                'CS = Clinical Safety (calorie floor + fat cap + min protein per meal) | '
                 'RA = Regional Alignment (BPS provincial score) | '
                 'ND = Nutrition Density (protein·4 + fiber·3) / kcal')
     fig.text(0.5, 0.01, footnote, ha='center', fontsize=8, color='#555555')
