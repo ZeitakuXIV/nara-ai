@@ -66,10 +66,6 @@ export async function POST(req: NextRequest) {
       const combined = [...primary, ...alternatives];
       
       const mappedRecipes = combined.map((item: any, i: number) => {
-        const scaling_reason = item.explanations && item.explanations.length > 0
-          ? item.explanations.join(' ')
-          : 'Calibrated based on your province and biometrics.';
-          
         return {
           id: item.id || `recipe_${i}_${item.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
           title: item.title,
@@ -80,8 +76,12 @@ export async function POST(req: NextRequest) {
           protein: Math.round(item.protein_per_serving || 25),
           carbs: Math.round(item.carbs_per_serving || 45),
           fat: Math.round(item.fat_per_serving || 12),
-          scaling_reason: scaling_reason,
-          ingredients: item.ingredients ? item.ingredients.split(',').map((p: string) => ({ qty: 'Secukupnya', name: p.trim() })) : []
+          explanations: item.explanations || ['Calibrated based on your province and biometrics.'],
+          ingredients: item.ingredients || '',
+          score: item.score ?? null,
+          food_category: item.food_category || null,
+          portion_scale_factor: item.portion_scale_factor ?? null,
+          regional_alignment_score: item.regional_alignment_score ?? null,
         };
       });
       

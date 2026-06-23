@@ -10,8 +10,12 @@ export interface Recipe {
   protein: number;
   carbs: number;
   fat: number;
-  scaling_reason: string;
-  ingredients: Array<{ name: string; qty: string }>;
+  explanations: string[];
+  ingredients: string;
+  score?: number;
+  food_category?: string;
+  portion_scale_factor?: number;
+  regional_alignment_score?: number;
 }
 
 export interface UserBiometrics {

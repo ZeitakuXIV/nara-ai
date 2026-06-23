@@ -101,8 +101,12 @@ export default function Onboarding() {
           protein: Math.round(item.protein || 25),
           carbs: Math.round(item.carbs || item.carbohydrate || 45),
           fat: Math.round(item.fat || 12),
-          scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
-          ingredients: item.ingredients || []
+          explanations: item.explanations || ['Calibrated based on your province and biometrics.'],
+          ingredients: item.ingredients || '',
+          score: item.score ?? null,
+          food_category: item.food_category ?? null,
+          portion_scale_factor: item.portion_scale_factor ?? null,
+          regional_alignment_score: item.regional_alignment_score ?? null,
         }));
         store.setMealPlan(normalizedPool);
       }

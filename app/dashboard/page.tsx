@@ -74,8 +74,12 @@ export default function Dashboard() {
           protein: Math.round(item.protein || 25),
           carbs: Math.round(item.carbs || item.carbohydrate || 45),
           fat: Math.round(item.fat || 12),
-          scaling_reason: item.scaling_reason || 'Calibrated based on your province and biometrics.',
-          ingredients: item.ingredients || []
+          explanations: item.explanations || ['Calibrated based on your province and biometrics.'],
+          ingredients: item.ingredients || '',
+          score: item.score ?? null,
+          food_category: item.food_category ?? null,
+          portion_scale_factor: item.portion_scale_factor ?? null,
+          regional_alignment_score: item.regional_alignment_score ?? null,
         }));
         store.setMealPlan(normalizedPool);
       }
@@ -273,21 +277,39 @@ export default function Dashboard() {
             </div>
 
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-7 rounded-[40px] bg-gradient-to-br from-nara-hunter to-nara-evergreen text-white shadow-float relative overflow-hidden">
-               <div className="flex items-center gap-2 mb-3">
+               <div className="flex items-center gap-2 mb-4">
                   <ShieldCheck size={18} className="text-nara-emerald" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-nara-emerald">Expert Reasoning Insight</span>
                </div>
-               <p className="text-white/80 text-[14px] leading-relaxed italic">&quot;{currentMeal.scaling_reason}&quot;</p>
+               <div className="space-y-2">
+                  {currentMeal.explanations.map((line: string, i: number) => {
+                    const firstChar = line.codePointAt(0) || 0;
+                    const hasEmoji = firstChar > 0x1F300;
+                    const isSectionHeader = /^[A-Z\s]{2,}:$/.test(line) || (hasEmoji && line.endsWith(':'));
+                    const isBullet = line.startsWith('•');
+                    const isStatus = hasEmoji && !line.endsWith(':');
+                    if (isSectionHeader) {
+                      return <p key={i} className="text-white font-black text-[11px] uppercase tracking-wider pt-2 first:pt-0">{line}</p>;
+                    }
+                    if (isBullet) {
+                      return <p key={i} className="text-white/85 text-[13px] leading-relaxed pl-3">{line}</p>;
+                    }
+                    if (isStatus) {
+                      return <p key={i} className="text-nara-emerald text-[12px] font-bold leading-relaxed">{line}</p>;
+                    }
+                    return <p key={i} className="text-white/75 text-[13px] leading-relaxed">{line}</p>;
+                  })}
+               </div>
             </motion.div>
 
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
-               <div className="space-y-4">
-                  {currentMeal.ingredients && currentMeal.ingredients.length > 0 ? (
-                    currentMeal.ingredients.map((ing: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
-                          <span className="text-sm font-bold text-nara-text">{ing.name || ing.item}</span>
-                          <span className="text-[11px] font-black text-nara-hunter bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">{ing.qty || ing.amount || 'Adjusted'}</span>
+               <div className="space-y-3">
+                  {currentMeal.ingredients ? (
+                    currentMeal.ingredients.split(',').map((ing: string, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
+                          <div className="w-1.5 h-1.5 rounded-full bg-nara-hunter/40 shrink-0" />
+                          <span className="text-sm font-bold text-nara-text">{ing.trim()}</span>
                       </div>
                     ))
                   ) : (
