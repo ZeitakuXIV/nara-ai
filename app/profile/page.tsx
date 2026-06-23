@@ -17,7 +17,8 @@ import {
   Loader2,
   Download,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { calculateBMI } from '@/utils/nutrition';
@@ -57,6 +58,26 @@ export default function Profile() {
     a.download = 'nara_ai_user_data.json';
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "⚠️ Delete Account\n\nThis will permanently delete all your data from NARA AI, including:\n• Personal profile & biometrics\n• Saved meal plans\n• AI recommendations\n\nThis action CANNOT be undone. Continue?"
+    );
+    if (!confirmed) return;
+
+    try {
+      if (store.userId) {
+        await supabase.from('user_profiles').delete().eq('email', store.email);
+        await supabase.from('meal_plans').delete().eq('user_id', store.userId);
+      }
+      store.resetProfile();
+      localStorage.removeItem('nara-user-storage');
+      router.push('/onboarding');
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed to delete data. Please contact support.");
+    }
   };
 
   const bmi = useMemo(() => calculateBMI(store.weight, store.height), [store.weight, store.height]);
@@ -263,8 +284,9 @@ export default function Profile() {
              {isSaving ? 'Saving...' : 'Deploy Changes'}
            </button>
            <button onClick={handleDownloadData} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><Download size={16} /> Download My Data (UU PDP)</button>
-           <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-rose-500 font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
-        </div>
+            <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-rose-500 font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
+            <button onClick={handleDeleteAccount} className="flex items-center justify-center gap-2 text-red-600 font-black text-[11px] uppercase tracking-widest py-4 bg-red-50 rounded-2xl border border-red-200 shadow-sm"><Trash2 size={16} /> Delete Account & All Data</button>
+         </div>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 h-[calc(84px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-[32px] border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] flex items-stretch justify-center gap-12 px-6 z-[100] pb-[env(safe-area-inset-bottom)]">

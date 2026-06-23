@@ -43,8 +43,10 @@ export interface UserBiometrics {
 
 interface UserStore extends UserBiometrics {
   isOnboarded: boolean;
+  consentGiven: boolean;
   mealPlan: Recipe[] | null; // Persisted AI results
   setBiometrics: (data: Partial<UserBiometrics>) => void;
+  setConsent: (value: boolean) => void;
   toggleAllergy: (allergy: string) => void;
   setMealPlan: (plan: Recipe[]) => void;
   clearMealPlan: () => void; // Clear only meal plan, keep profile intact
@@ -52,7 +54,7 @@ interface UserStore extends UserBiometrics {
   resetProfile: () => void;
 }
 
-const initialState: UserBiometrics & { isOnboarded: boolean; mealPlan: Recipe[] | null } = {
+const initialState: UserBiometrics & { isOnboarded: boolean; consentGiven: boolean; mealPlan: Recipe[] | null } = {
   userId: null,
   email: null,
   fullName: null,
@@ -65,6 +67,7 @@ const initialState: UserBiometrics & { isOnboarded: boolean; mealPlan: Recipe[] 
   allergies: [],
   goal: null,
   isOnboarded: false,
+  consentGiven: false,
   mealPlan: null,
 };
 
@@ -78,6 +81,7 @@ export const useUserStore = create<UserStore>()(
           ? state.allergies.filter((a) => a !== allergy)
           : [...state.allergies, allergy],
       })),
+      setConsent: (value) => set({ consentGiven: value }),
       setMealPlan: (plan) => set({ mealPlan: plan }),
       clearMealPlan: () => set({ mealPlan: null }),
       completeOnboarding: () => set({ isOnboarded: true }),

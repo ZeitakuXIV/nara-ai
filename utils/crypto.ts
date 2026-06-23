@@ -1,8 +1,24 @@
 /**
  * NARA AI Cryptography Utility (UU PDP Compliance)
  * Implements client-side AES-GCM 256-bit encryption for biometrics.
- * Uses browser-native Web Crypto API to avoid external bundle bloat.
+ * Uses browser-native Web Crypto API. Key fetched from server API to avoid
+ * exposing it in the client-side bundle.
  */
+
+let cachedKey: string | null = null;
+
+async function getSecret(): Promise<string> {
+  if (cachedKey) return cachedKey;
+  if (typeof window === 'undefined') return '';
+  try {
+    const res = await fetch('/api/crypto-key');
+    const data = await res.json();
+    cachedKey = data.key;
+    return cachedKey;
+  } catch {
+    return '';
+  }
+}
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -42,12 +58,14 @@ function hexToBuf(hexString: string): ArrayBuffer {
  * Encrypts plaintext string using AES-GCM 256.
  * Returns formatted ciphertext string "hexIV:hexCiphertext".
  */
-export async function encryptData(plaintext: string, secret: string = process.env.NEXT_PUBLIC_NARA_ENCRYPT_SECRET ?? "NARA_AI_SECRET_KEY"): Promise<string> {
+export async function encryptData(plaintext: string, secret?: string): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     return plaintext;
   }
   try {
-    const key = await getEncryptionKey(secret);
+    const s = secret || await getSecret();
+    if (!s) return plaintext;
+    const key = await getEncryptionKey(s);
     if (!key) return plaintext;
 
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -69,7 +87,7 @@ export async function encryptData(plaintext: string, secret: string = process.en
 /**
  * Decrypts formatted ciphertext string "hexIV:hexCiphertext" using AES-GCM 256.
  */
-export async function decryptData(ciphertext: string, secret: string = process.env.NEXT_PUBLIC_NARA_ENCRYPT_SECRET ?? "NARA_AI_SECRET_KEY"): Promise<string> {
+export async function decryptData(ciphertext: string, secret?: string): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
     return ciphertext;
   }
@@ -78,7 +96,9 @@ export async function decryptData(ciphertext: string, secret: string = process.e
   }
   try {
     const [hexIv, hexEncrypted] = ciphertext.split(':');
-    const key = await getEncryptionKey(secret);
+    const s = secret || await getSecret();
+    if (!s) return ciphertext;
+    const key = await getEncryptionKey(s);
     if (!key) return ciphertext;
 
     const iv = new Uint8Array(hexToBuf(hexIv));

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart, MapPin, ChevronDown, Check, X } from 'lucide-react';
 import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMI, getBmiStatus } from '@/utils/nutrition';
@@ -293,9 +294,18 @@ export default function Onboarding() {
                   );
                 })}
               </div>
-              <button disabled={!store.goal || isGenerating} onClick={handleGeneratePlan} className="btn-primary py-5 mt-6">
-                {isGenerating ? 'Syncing...' : 'Generate Plan'} <Zap size={20} fill="currentColor" />
-              </button>
+              <div className="pt-4 space-y-4">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input type="checkbox" checked={store.consentGiven} onChange={(e) => store.setConsent(e.target.checked)} className="mt-1 w-4 h-4 rounded border-slate-300 text-nara-hunter focus:ring-nara-hunter" />
+                  <span className="text-[11px] text-nara-muted font-bold leading-relaxed">
+                    I agree to the processing of my biometric data in accordance with the{' '}
+                    <Link href="/privacy" className="text-nara-hunter underline">Privacy Policy</Link> and Indonesian UU PDP.
+                  </span>
+                </label>
+                <button disabled={!store.goal || !store.consentGiven || isGenerating} onClick={handleGeneratePlan} className="btn-primary py-5 w-full">
+                  {isGenerating ? 'Syncing...' : 'Generate Plan'} <Zap size={20} fill="currentColor" />
+                </button>
+              </div>
             </motion.div>
           )}
 
