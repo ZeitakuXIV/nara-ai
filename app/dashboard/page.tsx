@@ -304,14 +304,19 @@ export default function Dashboard() {
             </motion.div>
 
             <div className="glass-container p-8 shadow-lg">
-                <div className="flex items-center justify-between mb-6">
-                   <h3 className="text-[10px] font-black text-nara-text uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
+                <div className="flex items-center justify-between mb-1">
+                   <h3 className="text-[10px] font-black text-nara-text uppercase tracking-widest opacity-60">Ingredients</h3>
                    {currentMeal.portion_scale_factor && currentMeal.portion_scale_factor !== 1 ? (
                      <span className={`text-[11px] font-black px-3 py-1 rounded-full border shadow-sm ${currentMeal.portion_scale_factor > 1 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
-                       {currentMeal.portion_scale_factor}x
+                       × {currentMeal.portion_scale_factor}
                      </span>
                    ) : null}
                 </div>
+                {currentMeal.portion_scale_factor && currentMeal.portion_scale_factor !== 1 ? (
+                  <p className="text-[10px] text-nara-muted font-bold mb-5 leading-relaxed">
+                    Ingredients shown are original. Multiply each by <span className="text-nara-hunter">{currentMeal.portion_scale_factor}×</span> based on your body metrics.
+                  </p>
+                ) : null}
                <div className="space-y-3">
                   {currentMeal.structured_ingredients && currentMeal.structured_ingredients.length > 0 ? (
                      currentMeal.structured_ingredients.map((ing: StructuredIngredient, i: number) => (
