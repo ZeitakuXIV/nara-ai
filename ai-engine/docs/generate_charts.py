@@ -32,9 +32,9 @@ N_RANDOM = 500
 SEED = 42
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-C_NARA   = '#2D6A4F'
-C_GREEDY = '#52B788'
-C_RANDOM = '#B7E4C7'
+C_NARA   = '#43644c'
+C_GREEDY = '#7e9d8d'
+C_RANDOM = '#bbcfc7'
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'assets')
 
@@ -340,7 +340,7 @@ def main():
     for bar, ref in zip(b2g, g_cals):
         dev = (ref - t_cal) / t_cal * 100
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 3,
-                 f'{dev:+.1f}%', ha='center', va='bottom', fontsize=7.5, fontweight='bold', color='#1a5e38')
+                 f'{dev:+.1f}%', ha='center', va='bottom', fontsize=7.5, fontweight='bold', color='#43644c')
 
     # Target line + tolerance band
     ax2.axhline(t_cal, color='#e63946', linewidth=1.8, linestyle='--', zorder=4,
@@ -377,8 +377,8 @@ def main():
 
     x3  = np.arange(len(metrics3))
     w3  = 0.30
-    C_GN = '#52B788'   # medium green — greedy only
-    C_LS = '#2D6A4F'   # dark green   — greedy + LS
+    C_GN = '#7e9d8d'   # medium green — greedy only
+    C_LS = '#43644c'   # dark green   — greedy + LS
 
     fig3, ax3 = plt.subplots(figsize=(11, 6))
     fig3.patch.set_facecolor('white')
@@ -395,7 +395,7 @@ def main():
     for bar, gv in zip(b3l, gn_vals):
         h   = bar.get_height()
         d   = h - gv * 100
-        col = '#1a5e38' if d > 0 else '#c0392b'
+        col = '#43644c' if d > 0 else '#c0392b'
         ax3.text(bar.get_x() + bar.get_width()/2, h + 0.8,
                  f'{h:.1f}% ({d:+.1f})', ha='center', va='bottom',
                  fontsize=9.5, color=col, fontweight='bold')
