@@ -13,8 +13,8 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-black text-nara-text mb-2">1. Data Controller</h2>
           <p className="text-[13px] text-nara-muted leading-relaxed">
-            [Your Company Name] acts as the Data Controller for all personal data processed through the NARA AI application.
-            Contact: [your-email@example.com]
+            NARA AI acts as the Data Controller for all personal data processed through the application.
+            Contact: support@nara-ai.app
           </p>
         </section>
 
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-black text-nara-text mb-2">9. Contact</h2>
           <p className="text-[13px] text-nara-muted leading-relaxed">
-            For privacy inquiries or to exercise your rights, contact: [your-email@example.com]
+            For privacy inquiries or to exercise your rights, contact: support@nara-ai.app
           </p>
         </section>
 
