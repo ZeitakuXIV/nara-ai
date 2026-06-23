@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { encryptData, decryptData } from '../utils/crypto';
 
+export interface StructuredIngredient {
+  raw: string;
+  item: string;
+  qty: number;
+  unit: string;
+  grams?: number;
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -12,6 +20,7 @@ export interface Recipe {
   fat: number;
   explanations: string[];
   ingredients: string;
+  structured_ingredients: StructuredIngredient[];
   score?: number;
   food_category?: string;
   portion_scale_factor?: number;

@@ -103,6 +103,7 @@ export default function Onboarding() {
           fat: Math.round(item.fat || 12),
           explanations: item.explanations || ['Calibrated based on your province and biometrics.'],
           ingredients: item.ingredients || '',
+          structured_ingredients: item.structured_ingredients || [],
           score: item.score ?? null,
           food_category: item.food_category ?? null,
           portion_scale_factor: item.portion_scale_factor ?? null,

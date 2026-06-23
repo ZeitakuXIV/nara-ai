@@ -697,9 +697,17 @@ class NaraRecommender:
                 freq_msg = (f"⚖️ STATUS KALORI: Menu ini mencakup {daily_cal} kkal dari "
                             f"target harian Anda ({daily_target_cal} kkal).")
 
+            # Parse structured_ingredients JSON or fallback to empty list
+            try:
+                si = json.loads(r["structured_ingredients"]) if pd.notna(r.get("structured_ingredients")) else []
+            except:
+                si = []
+
             res = {
                 "title": r["title"],
                 "ingredients": r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "",
+                "structured_ingredients": si,
+                "image": r.get("image_url", None) if pd.notna(r.get("image_url", None)) else None,
                 "instructions": r["instructions"] if "instructions" in r and pd.notna(r["instructions"]) else "",
                 "score": round(r["recommendation_score"] * 100, 1),
                 "food_category": cat,

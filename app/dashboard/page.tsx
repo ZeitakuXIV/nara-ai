@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { useUserStore, Recipe } from '@/store/userStore';
+import { useUserStore, Recipe, StructuredIngredient } from '@/store/userStore';
 import { calculateBMI, calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
 import { supabase } from '@/utils/supabase';
 
@@ -76,6 +76,7 @@ export default function Dashboard() {
           fat: Math.round(item.fat || 12),
           explanations: item.explanations || ['Calibrated based on your province and biometrics.'],
           ingredients: item.ingredients || '',
+          structured_ingredients: item.structured_ingredients || [],
           score: item.score ?? null,
           food_category: item.food_category ?? null,
           portion_scale_factor: item.portion_scale_factor ?? null,
@@ -305,7 +306,17 @@ export default function Dashboard() {
             <div className="glass-container p-8 shadow-lg">
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-3">
-                  {currentMeal.ingredients ? (
+                  {currentMeal.structured_ingredients && currentMeal.structured_ingredients.length > 0 ? (
+                    currentMeal.structured_ingredients.map((ing: StructuredIngredient, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
+                          <div className="w-1.5 h-1.5 rounded-full bg-nara-hunter/40 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                             <span className="text-sm font-bold text-nara-text">{ing.item}</span>
+                             {ing.qty > 0 && <span className="text-[11px] font-black text-nara-hunter bg-white ml-2 px-2.5 py-1 rounded-xl border border-slate-100 shadow-sm whitespace-nowrap">{ing.qty} {ing.unit}</span>}
+                          </div>
+                      </div>
+                    ))
+                  ) : currentMeal.ingredients ? (
                     currentMeal.ingredients.split(',').map((ing: string, i: number) => (
                       <div key={i} className="flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
                           <div className="w-1.5 h-1.5 rounded-full bg-nara-hunter/40 shrink-0" />
