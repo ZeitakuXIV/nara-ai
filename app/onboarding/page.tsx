@@ -25,7 +25,7 @@ export default function Onboarding() {
     { id: 'extra', title: 'Highly Active', desc: 'Intense daily exercise.', icon: Zap },
   ];
 
-  const commonAllergies = ['Peanuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Seafood', 'Shellfish', 'Tree Nuts'];
+  const commonAllergies = ['Peanuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Fish', 'Shellfish', 'Tree Nuts'];
 
   const dietGoals = [
     { id: 'cutting', title: 'Cutting', desc: 'Fat loss focus.', icon: Zap },

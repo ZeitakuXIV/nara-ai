@@ -277,6 +277,7 @@ _INSTRUCTION_WORDS = {
     'haluskan', 'cuci', 'cuci bersih', 'potong', 'potong2', 'potong kotak',
     'potong dadu', 'potong-potong', 'rendam', 'rendam air panas',
     'pisahkan', 'aduk', 'sisihkan', 'panaskan', 'tumis', 'masukkan',
+    'kupas', 'kupas kulitnya',
     'tuang', 'saring', 'biarkan', 'angkat', 'sajikan', 'tabur', 'taburi',
     'kucuri', 'remas', 'campur', 'larutkan', 'kukus', 'panggang',
     'or as needed', 'for garnish', 'drained', 'garnish', 'to taste',
@@ -504,25 +505,70 @@ class NaraRecommender:
             goal=user_profile["goal"]
         )
         
-        user_allergies = {a.lower().strip() for a in user_profile.get("allergies", [])}
+        user_allergies_raw = {a.lower().strip() for a in user_profile.get("allergies", [])}
+
+        ALLERGEN_LABEL_MAP = {
+            'soy': {'soybeans', 'soy allergy', '**soybeans'},
+            'shellfish': {'shellfish', 'shellfish allergy', '**shellfish'},
+            'fish': {'fish', 'fish allergy', '**fish'},
+            'dairy': {'dairy', '**dairy', 'milk', 'milk allergy / lactose intolerance'},
+            'gluten': {'gluten', 'gluten allergy', '**gluten'},
+            'peanuts': {'peanuts', 'peanut allergy', '**peanuts'},
+            'eggs': {'eggs'},
+            'tree nuts': {'tree nuts', '**tree nuts', 'nut allergy', 'nuts', 'almonds', 'pine nuts'},
+        }
+
+        user_allergies = set()
+        for a in user_allergies_raw:
+            user_allergies.add(a)
+            user_allergies |= ALLERGEN_LABEL_MAP.get(a, set())
+
+        INDONESIAN_INGREDIENT_ALLERGENS = {
+            'udang': 'shellfish', 'kepiting': 'shellfish', 'rajungan': 'shellfish', 'lobster': 'shellfish',
+            'shrimp': 'shellfish', 'prawn': 'shellfish', 'prawns': 'shellfish', 'shrimps': 'shellfish',
+            'cumi': 'mollusks', 'cumi-cumi': 'mollusks', 'sotong': 'mollusks',
+            'kerang': 'mollusks', 'kerang hijau': 'mollusks', 'kerang darah': 'mollusks',
+            'tiram': 'mollusks', 'simping': 'mollusks',
+            'teri': 'fish', 'ikan teri': 'fish',
+            'kembung': 'fish', 'ikan kembung': 'fish', 'tongkol': 'fish', 'ikan tongkol': 'fish',
+            'tuna': 'fish', 'salmon': 'fish', 'kakap': 'fish', 'bawal': 'fish',
+            'gurame': 'fish', 'nila': 'fish', 'patin': 'fish', 'lele': 'fish',
+            'bandeng': 'fish', 'mujair': 'fish', 'makarel': 'fish', 'sarden': 'fish', 'sardines': 'fish',
+            'tahu': 'soybeans', 'tempe': 'soybeans', 'tempeh': 'soybeans', 'tofu': 'soybeans',
+            'kecap': 'soybeans', 'kecap manis': 'soybeans', 'edamame': 'soybeans',
+            'kacang': 'peanuts', 'kacang tanah': 'peanuts',
+            'susu': 'dairy', 'keju': 'dairy', 'mentega': 'dairy', 'yogurt': 'dairy', 'cream': 'dairy',
+            'terigu': 'gluten', 'tepung terigu': 'gluten', 'mie': 'gluten', 'roti': 'gluten',
+            'telur': 'eggs',
+        }
+
         global_indonesian_only = os.environ.get('INDONESIAN_ONLY', 'false').lower() in ['true', '1', 'yes']
         indonesian_only = user_profile.get("indonesian_only", global_indonesian_only)
-        
+
         # ── 3. Fast Allergen Filter Stage (Pre-parsed List Indexing) ──
         valid_indices = []
         for idx, ingredients in enumerate(self.parsed_ingredients):
-            # Check source if indonesian_only is enabled
             if indonesian_only and self.df.iloc[idx]['source'] != 'indonesian_local':
                 continue
-                
+
             triggers_allergy = False
             for ing in ingredients:
                 item = ing.get('item', '').lower().strip()
-                if item in self.allergen_map:
-                    triggered_groups = self.allergen_map[item]
-                    if triggered_groups & user_allergies:
-                        triggers_allergy = True
-                        break
+                triggered_groups = self.allergen_map.get(item, set())
+
+                if not triggered_groups:
+                    item_words = item.replace(',', ' ').split()
+                    for w in item_words:
+                        w = w.strip().strip(',.').rstrip('.')
+                        if w in self.allergen_map:
+                            triggered_groups |= self.allergen_map[w]
+                        id_label = INDONESIAN_INGREDIENT_ALLERGENS.get(w)
+                        if id_label:
+                            triggered_groups.add(id_label)
+
+                if triggered_groups & user_allergies:
+                    triggers_allergy = True
+                    break
             if not triggers_allergy:
                 valid_indices.append(idx)
                 
