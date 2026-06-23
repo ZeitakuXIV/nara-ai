@@ -261,6 +261,7 @@ _UNITS = {
     'tbsp', 'tsp', 'cup', 'cups', 'oz', 'lb', 'pound', 'ounce',
     'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons',
     'package', 'packages', 'can', 'jar', 'slice', 'slices',
+    'genggam',
 }
 
 # Match quantity at line start: 250, 1,5, 1/2, ¼, secukupnya
@@ -319,16 +320,14 @@ def parse_ingredients_text(text: str) -> list:
 
             qty = 1.0
             qty_str = raw_qty.lower()
-            if qty_str.startswith('se') and qty_str != 'secukupnya':
-                qty = 1.0
-            elif qty_str == 'secukupnya':
+            if qty_str == 'secukupnya':
                 qty = 0.0
-            else:
+            elif not qty_str.startswith('se'):
                 qty_str_clean = qty_str.replace(',', '.').replace('\u00BC', '0.25').replace('\u00BD', '0.5').replace('\u00BE', '0.75')
                 if '/' in qty_str_clean:
                     try:
-                        num, den = qty_str_clean.split('/')
-                        qty = float(num.strip()) / float(den.strip())
+                        num_part, den_part = qty_str_clean.split('/')
+                        qty = float(num_part.strip()) / float(den_part.strip())
                     except:
                         qty = 1.0
                 else:
@@ -339,7 +338,12 @@ def parse_ingredients_text(text: str) -> list:
 
             unit = ''
             item = remainder
-            if remainder:
+            se_suffix = qty_str[2:] if qty_str.startswith('se') and qty_str != 'secukupnya' else ''
+
+            if se_suffix and se_suffix in _UNITS:
+                unit = se_suffix
+                item = remainder
+            elif remainder:
                 unit_match = re.match(r'^(\S+)\s*', remainder)
                 if unit_match:
                     candidate = unit_match.group(1).lower().rstrip('.')
@@ -354,7 +358,6 @@ def parse_ingredients_text(text: str) -> list:
             if lower.strip() in _INSTRUCTION_WORDS or any(lower.startswith(w) for w in _INSTRUCTION_WORDS if len(w) > 3):
                 if buffer:
                     buffer['raw'] = buffer['raw'] + ', ' + part
-                    buffer['item'] = buffer['item'] + ', ' + part
                 continue
             elif buffer:
                 buffer['raw'] = buffer['raw'] + ', ' + part
