@@ -249,6 +249,127 @@ def _norm_prov(s: str) -> str:
     """Normalize province name: collapse internal whitespace, strip, lowercase."""
     return re.sub(r'\s+', ' ', str(s)).strip().lower()
 
+# ──────────────────────────────────────────────
+# Indonesian ingredient text parser
+# ──────────────────────────────────────────────
+
+_UNITS = {
+    'gr', 'g', 'kg', 'ml', 'l', 'liter', 'sdm', 'sdt', 'buah', 'butir',
+    'siung', 'ekor', 'batang', 'ruas', 'lembar', 'bungkus', 'piring',
+    'gelas', 'mangkuk', 'cangkir', 'iris', 'potong', 'ikat', 'sendok',
+    'cm', 'm', 'sachet', 'pack', 'ons', 'kaleng', 'botol', 'keping',
+    'tbsp', 'tsp', 'cup', 'cups', 'oz', 'lb', 'pound', 'ounce',
+    'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons',
+    'package', 'packages', 'can', 'jar', 'slice', 'slices',
+}
+
+# Match quantity at line start: 250, 1,5, 1/2, ¼, secukupnya
+_QTY_RE = re.compile(
+    r'^(se(cukupnya|potong|ikat|lembar|iris|gelas|mangkuk|sendok|buah|butir|siung|batang|ruas|ekor|bungkus|genggam)?)'
+    r'|^\d+\s*/\s*\d+|^\d+(?:[.,]\s*\d+)?',
+    re.IGNORECASE
+)
+
+_INSTRUCTION_WORDS = {
+    'digeprek', 'geprek', 'iris', 'iris tipis', 'iris halus', 'tiriskan',
+    'rebus', 'rebus sebentar', 'cincang', 'cincang kasar', 'cincang halus',
+    'haluskan', 'cuci', 'cuci bersih', 'potong', 'potong2', 'potong kotak',
+    'potong dadu', 'potong-potong', 'rendam', 'rendam air panas',
+    'pisahkan', 'aduk', 'sisihkan', 'panaskan', 'tumis', 'masukkan',
+    'tuang', 'saring', 'biarkan', 'angkat', 'sajikan', 'tabur', 'taburi',
+    'kucuri', 'remas', 'campur', 'larutkan', 'kukus', 'panggang',
+    'or as needed', 'for garnish', 'drained', 'garnish', 'to taste',
+    'to cover', 'secukupnya',
+    'peeled', 'cored', 'chopped', 'diced', 'sliced', 'minced',
+    'quartered', 'halved', 'mashed', 'crushed', 'melted',
+    'softened', 'warmed', 'chilled', 'drained', 'rinsed',
+    'cooked', 'raw', 'fresh', 'frozen', 'canned',
+}
+
+def parse_ingredients_text(text: str) -> list:
+    if not text or not isinstance(text, str):
+        return []
+    text = text.strip()
+
+    placeholders = {}
+    def _protect_decimals(m):
+        key = f"\x00DEC{i}\x00"
+        placeholders[key] = m.group(0)
+        return key
+    i = [0]
+    text = re.sub(r'(\d),(\s*\d)', lambda m: _protect_decimals(m), text)
+
+    parts = [p.strip() for p in text.split(',')]
+    result = []
+    buffer = None
+
+    for part in parts:
+        for ph, orig in placeholders.items():
+            part = part.replace(ph, orig)
+
+        lower = part.lower()
+
+        if lower.endswith(':'):
+            continue
+
+        qty_match = _QTY_RE.match(part)
+        if qty_match:
+            raw_qty = qty_match.group(0).strip()
+            remainder = part[len(raw_qty):].strip()
+
+            qty = 1.0
+            qty_str = raw_qty.lower()
+            if qty_str.startswith('se') and qty_str != 'secukupnya':
+                qty = 1.0
+            elif qty_str == 'secukupnya':
+                qty = 0.0
+            else:
+                qty_str_clean = qty_str.replace(',', '.').replace('\u00BC', '0.25').replace('\u00BD', '0.5').replace('\u00BE', '0.75')
+                if '/' in qty_str_clean:
+                    try:
+                        num, den = qty_str_clean.split('/')
+                        qty = float(num.strip()) / float(den.strip())
+                    except:
+                        qty = 1.0
+                else:
+                    try:
+                        qty = float(qty_str_clean)
+                    except:
+                        qty = 1.0
+
+            unit = ''
+            item = remainder
+            if remainder:
+                unit_match = re.match(r'^(\S+)\s*', remainder)
+                if unit_match:
+                    candidate = unit_match.group(1).lower().rstrip('.')
+                    if candidate in _UNITS:
+                        unit = candidate
+                        item = remainder[len(unit):].strip()
+
+            if buffer:
+                result.append(buffer)
+            buffer = {'raw': part, 'item': item, 'qty': qty, 'unit': unit, 'grams': qty if unit == 'gr' else (qty * 1000 if unit == 'kg' else 0)}
+        else:
+            if lower.strip() in _INSTRUCTION_WORDS or any(lower.startswith(w) for w in _INSTRUCTION_WORDS if len(w) > 3):
+                if buffer:
+                    buffer['raw'] = buffer['raw'] + ', ' + part
+                    buffer['item'] = buffer['item'] + ', ' + part
+                continue
+            elif buffer:
+                buffer['raw'] = buffer['raw'] + ', ' + part
+                buffer['item'] = buffer['item'] + ', ' + part
+            else:
+                result.append({'raw': part, 'item': part, 'qty': 0.0, 'unit': '', 'grams': 0})
+
+    if buffer:
+        # Only append if it's not just an instruction alone
+        lower_item = buffer['item'].strip().lower()
+        if lower_item not in _INSTRUCTION_WORDS:
+            result.append(buffer)
+
+    return result
+
 
 class NaraRecommender:
     def __init__(self):
@@ -697,33 +818,8 @@ class NaraRecommender:
                 freq_msg = (f"⚖️ STATUS KALORI: Menu ini mencakup {daily_cal} kkal dari "
                             f"target harian Anda ({daily_target_cal} kkal).")
 
-            # Parse structured_ingredients JSON or fallback to empty list
-            try:
-                raw_si = json.loads(r["structured_ingredients"]) if pd.notna(r.get("structured_ingredients")) else []
-            except:
-                raw_si = []
-
-            # Filter out noise: instructions, section headers, cooking steps
-            _NOISE_ITEMS = {
-                'digeprek', 'geprek', 'iris', 'tiriskan', 'rebus', 'tiriskan',
-                'cincang', 'haluskan', 'cuci', 'potong', 'potong2', 'potong-potong',
-                'rendam', 'pisahkan', 'aduk', 'sisihkan', 'panaskan', 'tumis',
-                'masukkan', 'tuang', 'saring', 'biarkan', 'angkat', 'sajikan',
-                'or as needed', 'for garnish', 'drained', 'garnish',
-                'secukupnya', 'to taste', 'to cover',
-            }
-            _NOISE_RAW_PREFIXES = ('bumbu ', 'bahan ', 'adonan ', 'pelengkap ')
-            si = []
-            for item in raw_si:
-                raw = item.get('raw', '').strip().lower()
-                item_name = item.get('item', '').strip().lower()
-                if raw.endswith(':'):
-                    continue
-                if item_name in _NOISE_ITEMS:
-                    continue
-                if any(item_name.startswith(p) for p in _NOISE_RAW_PREFIXES) and not any(c.isdigit() for c in item_name):
-                    continue
-                si.append(item)
+            # Parse ingredients text with Indonesian-aware parser
+            si = parse_ingredients_text(r["ingredients"] if "ingredients" in r and pd.notna(r["ingredients"]) else "")
 
             res = {
                 "title": r["title"],
