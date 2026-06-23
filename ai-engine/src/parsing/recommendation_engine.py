@@ -699,9 +699,31 @@ class NaraRecommender:
 
             # Parse structured_ingredients JSON or fallback to empty list
             try:
-                si = json.loads(r["structured_ingredients"]) if pd.notna(r.get("structured_ingredients")) else []
+                raw_si = json.loads(r["structured_ingredients"]) if pd.notna(r.get("structured_ingredients")) else []
             except:
-                si = []
+                raw_si = []
+
+            # Filter out noise: instructions, section headers, cooking steps
+            _NOISE_ITEMS = {
+                'digeprek', 'geprek', 'iris', 'tiriskan', 'rebus', 'tiriskan',
+                'cincang', 'haluskan', 'cuci', 'potong', 'potong2', 'potong-potong',
+                'rendam', 'pisahkan', 'aduk', 'sisihkan', 'panaskan', 'tumis',
+                'masukkan', 'tuang', 'saring', 'biarkan', 'angkat', 'sajikan',
+                'or as needed', 'for garnish', 'drained', 'garnish',
+                'secukupnya', 'to taste', 'to cover',
+            }
+            _NOISE_RAW_PREFIXES = ('bumbu ', 'bahan ', 'adonan ', 'pelengkap ')
+            si = []
+            for item in raw_si:
+                raw = item.get('raw', '').strip().lower()
+                item_name = item.get('item', '').strip().lower()
+                if raw.endswith(':'):
+                    continue
+                if item_name in _NOISE_ITEMS:
+                    continue
+                if any(item_name.startswith(p) for p in _NOISE_RAW_PREFIXES) and not any(c.isdigit() for c in item_name):
+                    continue
+                si.append(item)
 
             res = {
                 "title": r["title"],
