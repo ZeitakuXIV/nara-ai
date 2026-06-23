@@ -547,11 +547,13 @@ class NaraRecommender:
 
         # ── 3. Fast Allergen Filter Stage (Pre-parsed List Indexing) ──
         valid_indices = []
+        allergen_debug = collections.Counter()
         for idx, ingredients in enumerate(self.parsed_ingredients):
             if indonesian_only and self.df.iloc[idx]['source'] != 'indonesian_local':
                 continue
 
             triggers_allergy = False
+            matched_labels = set()
             for ing in ingredients:
                 item = ing.get('item', '').lower().strip()
                 triggered_groups = self.allergen_map.get(item, set())
@@ -566,12 +568,17 @@ class NaraRecommender:
                         if id_label:
                             triggered_groups.add(id_label)
 
-                if triggered_groups & user_allergies:
+                overlap = triggered_groups & user_allergies
+                if overlap:
                     triggers_allergy = True
-                    break
-            if not triggers_allergy:
+                    matched_labels |= overlap
+
+            if triggers_allergy:
+                for label in matched_labels:
+                    allergen_debug[label] += 1
+            else:
                 valid_indices.append(idx)
-                
+
         filtered_df = self.df.iloc[valid_indices].copy()
         filtered_commodities = [self.recipe_commodities[i] for i in valid_indices]
         n_filtered = len(self.df) - len(filtered_df)
@@ -915,6 +922,7 @@ class NaraRecommender:
             "elapsed_ms": round(elapsed_ms, 2),
             "targets": targets,
             "recipes_filtered_out_allergens": n_filtered,
+            "allergen_filter_debug": dict(allergen_debug.most_common()),
             "recipes_scored_realtime": len(filtered_df),
             "province_aligned": prov_display,
             "primary_schedule": primary_output,
