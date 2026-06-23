@@ -261,12 +261,12 @@ _UNITS = {
     'tbsp', 'tsp', 'cup', 'cups', 'oz', 'lb', 'pound', 'ounce',
     'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons',
     'package', 'packages', 'can', 'jar', 'slice', 'slices',
-    'genggam',
+    'genggam', 'biji', 'pcs', 'pc',
 }
 
 # Match quantity at line start: 250, 1,5, 1/2, ¼, secukupnya
 _QTY_RE = re.compile(
-    r'^(se(cukupnya|potong|ikat|lembar|iris|gelas|mangkuk|sendok|buah|butir|siung|batang|ruas|ekor|bungkus|genggam)?)'
+    r'^(?:se(?=[\s,])|se(?:cukupnya|potong|ikat|lembar|iris|gelas|mangkuk|sendok|buah|butir|siung|batang|ruas|ekor|bungkus|genggam|biji))'
     r'|^\d+\s*/\s*\d+|^\d+(?:[.,]\s*\d+)?',
     re.IGNORECASE
 )

@@ -307,18 +307,14 @@ export default function Dashboard() {
                <h3 className="text-[10px] font-black text-nara-text mb-6 uppercase tracking-widest opacity-60">Scaled Ingredients</h3>
                <div className="space-y-3">
                   {currentMeal.structured_ingredients && currentMeal.structured_ingredients.length > 0 ? (
-                    currentMeal.structured_ingredients.map((ing: StructuredIngredient, i: number) => {
-                      const isCleanParse = ing.unit !== 'unit' && ing.qty > 0 && ing.unit !== '';
-                      return (
-                      <div key={i} className="flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
-                          <div className="w-1.5 h-1.5 rounded-full bg-nara-hunter/40 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                             <span className="text-sm font-bold text-nara-text">{ing.raw || ing.item}</span>
-                             {isCleanParse && <span className="text-[11px] font-black text-nara-hunter bg-white ml-2 px-2.5 py-1 rounded-xl border border-slate-100 shadow-sm whitespace-nowrap">{ing.qty} {ing.unit}</span>}
-                          </div>
-                      </div>
-                       );
-                     }))
+                     currentMeal.structured_ingredients.map((ing: StructuredIngredient, i: number) => (
+                       <div key={i} className="flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
+                           <div className="w-1.5 h-1.5 rounded-full bg-nara-hunter/40 shrink-0" />
+                           <div className="flex-1 min-w-0">
+                              <span className="text-sm font-bold text-nara-text">{ing.raw || ing.item}</span>
+                           </div>
+                       </div>
+                      )))
                    : currentMeal.ingredients ? (
                     currentMeal.ingredients.split(',').map((ing: string, i: number) => (
                       <div key={i} className="flex items-center gap-3 p-3 bg-white/40 rounded-2xl border border-white/80 shadow-sm">
