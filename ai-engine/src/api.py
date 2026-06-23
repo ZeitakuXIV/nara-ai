@@ -17,10 +17,6 @@ sys.path.append(current_dir)
 load_dotenv(os.path.join(root_dir, ".env.local"))
 load_dotenv(os.path.join(root_dir, ".env"))
 
-# Billing synchronization for Gemini Enterprise Agent Platform
-if "GOOGLE_CLOUD_PROJECT" in os.environ:
-    os.environ["PROJECT_ID"] = os.environ["GOOGLE_CLOUD_PROJECT"]
-
 from src.parsing.recommendation_engine import NaraRecommender
 from src.nara_agent import root_agent
 try:
@@ -30,7 +26,6 @@ except ModuleNotFoundError:
 from google.adk.runners import Runner
 from google.adk.sessions import DatabaseSessionService
 from google.genai import types
-import asyncio
 
 app = FastAPI(
     title="Nara AI Recommendation Engine API",

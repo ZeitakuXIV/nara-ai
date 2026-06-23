@@ -131,7 +131,6 @@ def calculate_user_targets(weight_kg: float, height_cm: float, age_years: int, s
         "protein_target_meal": round(protein_g / 3.0, 1),
         "fat_target_meal": round(fat_g / 3.0, 1),
         "carbohydrates_target_meal": round(carb_g / 3.0, 1),
-        "using_abw": False
     }
 
 # ──────────────────────────────────────────────
@@ -244,30 +243,7 @@ def is_main_dish(title, ingredients_list, protein_per_100g=0) -> bool:
 
     return True
 
-def load_env_indonesian_only() -> bool:
-    """
-    Manually parses the root .env file to load INDONESIAN_ONLY configuration.
-    Keeps python zero-dependency (no need to pip install python-dotenv).
-    """
-    search_paths = [
-        os.path.join(BASE_DIR, ".env"),
-        os.path.join(os.path.dirname(BASE_DIR), ".env"),
-        ".env"
-    ]
-    for path in search_paths:
-        if os.path.exists(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        line_stripped = line.strip()
-                        if line_stripped.startswith("INDONESIAN_ONLY"):
-                            parts = line_stripped.split("=", 1)
-                            if len(parts) == 2:
-                                val = parts[1].strip().lower()
-                                return val in ['true', '1', 'yes']
-            except Exception as e:
-                print(f"⚠️ Warning: Failed to read .env at {path}: {e}")
-    return False
+
 
 def _norm_prov(s: str) -> str:
     """Normalize province name: collapse internal whitespace, strip, lowercase."""
@@ -339,7 +315,7 @@ class NaraRecommender:
             
         print(f"✅ NaraRecommender: Loaded {len(self.df):,} recipes, {len(self.allergen_map):,} allergens, and {len(self.consumption_map):,} provinces.")
 
-    def recommend(self, user_profile: dict, use_local_search: bool = True) -> dict:
+    def recommend(self, user_profile: dict) -> dict:
         """
         Generates a 7-day diverse meal plan (7 primary + 8 swappable alternatives = 15 total)
         using a greedy backtracking-based Constraint Satisfaction Problem (CSP) solver, 
@@ -405,7 +381,7 @@ class NaraRecommender:
         )
         
         user_allergies = {a.lower().strip() for a in user_profile.get("allergies", [])}
-        global_indonesian_only = load_env_indonesian_only()
+        global_indonesian_only = os.environ.get('INDONESIAN_ONLY', 'false').lower() in ['true', '1', 'yes']
         indonesian_only = user_profile.get("indonesian_only", global_indonesian_only)
         
         # ── 3. Fast Allergen Filter Stage (Pre-parsed List Indexing) ──
@@ -570,51 +546,6 @@ class NaraRecommender:
         # Safe balance: if primary schedule didn't reach 7, pop from alternatives
         while len(primary_list) < 7 and alternative_list:
             primary_list.append(alternative_list.pop(0))
-
-        # ── 6b. Local Search Refinement (hill-climbing swap) ──
-        # For each slot in the 7-day plan, try replacing it with a higher-scoring
-        # candidate that still satisfies category rotation constraints.
-        # Accepts first improvement per slot; repeats until no pass improves the plan.
-        if use_local_search:
-            ls_pool = []
-            selected_titles = {item[0]['title'] for item in primary_list}
-            for idx_val, r_cand in candidates.head(300).iterrows():
-                if r_cand['title'] in selected_titles:
-                    continue
-                ings_cand = self.parsed_ingredients[idx_val]
-                if not is_main_dish(r_cand['title'], ings_cand, r_cand['Recipe Protein']):
-                    continue
-                cat_cand = classify_recipe_category(ings_cand, r_cand['title'])
-                _bw = 120.0 if cat_cand == 'plant_based' else (300.0 if cat_cand in ('starch', 'other') else 100.0)
-                _rc = r_cand['Recipe Caloric Value'] * (_bw / 100.0)
-                _rcarb = r_cand['Recipe Carbohydrates'] * (_bw / 100.0)
-                _max_ach = _rc * 1.5 if _rcarb >= 20.0 else min(_rc * 2.0, t_cal) + 455
-                if _max_ach < t_cal * 0.75:
-                    continue
-                ls_pool.append((r_cand, cat_cand, ings_cand))
-
-            def plan_score(plan):
-                return sum(item[0]['recommendation_score'] for item in plan)
-
-            for _pass in range(5):
-                improved = False
-                selected_titles = {item[0]['title'] for item in primary_list}
-                for i in range(len(primary_list)):
-                    current_score = plan_score(primary_list)
-                    for r_cand, cat_cand, ings_cand in ls_pool:
-                        if r_cand['title'] in selected_titles:
-                            continue
-                        tentative = primary_list[:i] + [(r_cand, cat_cand, ings_cand)] + primary_list[i+1:]
-                        cat_counts = collections.Counter(item[1] for item in tentative)
-                        if any(v > 3 for v in cat_counts.values()):
-                            continue
-                        if plan_score(tentative) > current_score:
-                            primary_list = tentative
-                            selected_titles = {item[0]['title'] for item in primary_list}
-                            improved = True
-                            break
-                if not improved:
-                    break
 
         # ── 7. Formatting & Explainable AI (XAI) serving portion scaling ──
         prov_display = user_profile.get("province", "Nasional")
@@ -815,134 +746,4 @@ class NaraRecommender:
             "alternative_pool": alternative_output
         }
 
-# ──────────────────────────────────────────────
-# Demo Run
-# ──────────────────────────────────────────────
 
-def run_demo():
-    print("🚀 NARA AI-ENGINE: Starting Dynamic 7-Day Portion-Optimized & Diverse Meal Plan Demo ...\n")
-    engine = NaraRecommender()
-    
-    # ── User Profile 1: Weight Loss + Gluten Allergy + Jawa Barat + Pure Indonesian ──
-    user1 = {
-        "weight_kg": 70.0,
-        "height_cm": 172.0,
-        "age_years": 24,
-        "sex": "female",
-        "activity_level": "moderately_active",
-        "goal": "weight_loss",
-        "allergies": ["gluten allergy"],
-        "province": "Jawa Barat",
-        "clinical_conditions": []
-    }
-    
-    print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 1: Weight Loss (Active) + Gluten Allergy + Jawa Barat [PURE INDONESIAN MEALS]")
-    print("-------------------------------------------------------")
-    res1 = engine.recommend(user1)
-    if res1["status"] == "success":
-        print(f"📊 Targets per meal : {res1['targets']['caloric_target_meal']} kcal | "
-              f"P: {res1['targets']['protein_target_meal']}g | F: {res1['targets']['fat_target_meal']}g | C: {res1['targets']['carbohydrates_target_meal']}g")
-        print(f"🌏 Aligned Province : {res1['province_aligned']}")
-        print(f"⚡ Scoring Speed    : {res1['elapsed_ms']} milliseconds! (Scored {res1['recipes_scored_realtime']} recipes)")
-        
-        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (CSP Rotated - Local Indonesian) ======")
-        for rec in res1["primary_schedule"]:
-            print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
-            print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
-            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}% | Density: {rec['density']:.2f}")
-            print(f"     🔍 AI Rationale:")
-            for exp in rec["explanations"]:
-                print(f"       👉 {exp}")
-            print("  " + "-"*60)
-            
-        print("\n🔄 ====== SWAPPABLE ALTERNATIVES POOL ======")
-        for idx, rec in enumerate(res1["alternative_pool"]):
-            print(f"  Option {idx+1}. {rec['title']} ({rec['food_category'].upper()})")
-            print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
-            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}%")
-
-    # ── User Profile 2: Papua comparison (Same parameters but different province + Pure Indonesian) ──
-    user2 = {
-        "weight_kg": 70.0,
-        "height_cm": 172.0,
-        "age_years": 24,
-        "sex": "female",
-        "activity_level": "moderately_active",
-        "goal": "weight_loss",
-        "allergies": ["gluten allergy"],
-        "province": "Papua",
-        "clinical_conditions": []
-    }
-    
-    print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 2: Weight Loss (Active) + Gluten Allergy + Papua [PURE INDONESIAN MEALS]")
-    print("-------------------------------------------------------")
-    res2 = engine.recommend(user2)
-    if res2["status"] == "success":
-        print(f"🌏 Aligned Province : {res2['province_aligned']}")
-        print(f"⚡ Scoring Speed    : {res2['elapsed_ms']} milliseconds!")
-        
-        print("\n🏆 ====== 7-DAY DIVERSE PRIMARY SCHEDULE (BPS Papua Aligned - Local Indonesian) ======")
-        for rec in res2["primary_schedule"]:
-            print(f"  📅 {rec['day']}: {rec['title']} ({rec['food_category'].upper()})")
-            print(f"     [Scale: {rec['portion_scale_factor']}x] Calories: {rec['calories_per_serving']} kcal | P: {rec['protein_per_serving']}g | F: {rec['fat_per_serving']}g | C: {rec['carbs_per_serving']}g")
-            print(f"     🌏 RAS Score : {rec['regional_alignment_score']}%")
-            print("  " + "-"*60)
-
-    # ── User Profile 3: Safety Cutoff triggered (Kidney Disease) ──
-    user3 = {
-        "weight_kg": 65.0,
-        "height_cm": 165.0,
-        "age_years": 45,
-        "sex": "male",
-        "activity_level": "sedentary",
-        "goal": "maintenance",
-        "allergies": [],
-        "province": "Jawa Tengah",
-        "clinical_conditions": ["kidney_disease"]
-    }
-    
-    print("\n-------------------------------------------------------")
-    print("👤 USER PROFILE 3: Maintenance + Kidney Disease (Safety Trigger)")
-    print("-------------------------------------------------------")
-    res3 = engine.recommend(user3)
-    if res3["status"] == "safety_cutoff_triggered":
-        print(f"⚠️  [SAFETY CUTOFF TRIGGERED] Condition: {res3['clinical_condition_triggered']}")
-        print(f"🛑 Medical Disclaimer ID:")
-        print(f"   \"{res3['medical_disclaimer_id']}\"")
-        print(f"🛑 Medical Disclaimer EN:")
-        print(f"   \"{res3['medical_disclaimer_en']}\"")
-        print("-------------------------------------------------------\n")
-
-if __name__ == "__main__":
-    import sys
-    
-    # Check if run with profile CLI argument
-    if len(sys.argv) > 1:
-        profile_json = None
-        for i, arg in enumerate(sys.argv):
-            if arg == "--profile" and i + 1 < len(sys.argv):
-                profile_json = sys.argv[i + 1]
-                break
-        
-        if profile_json:
-            try:
-                user_profile = json.loads(profile_json)
-                engine = NaraRecommender()
-                result = engine.recommend(user_profile)
-                # Print only the resulting JSON string so Next.js can parse it directly
-                print(json.dumps(result, ensure_ascii=False))
-                sys.exit(0)
-            except Exception as e:
-                error_res = {
-                    "status": "error",
-                    "message": f"Python Engine Execution Error: {str(e)}"
-                }
-                print(json.dumps(error_res, ensure_ascii=False))
-                sys.exit(1)
-        else:
-            print("Usage: python3 recommendation_engine.py --profile '<JSON_STRING>'")
-            sys.exit(1)
-    else:
-        run_demo()

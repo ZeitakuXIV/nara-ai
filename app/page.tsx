@@ -19,9 +19,7 @@ export default function AppEntry() {
   const store = useUserStore();
 
   // Basic validation
-  const isFormValid = isLogin 
-    ? email.includes('@') && password.length >= 6 
-    : fullName.length > 2 && email.includes('@') && password.length >= 6;
+  const isFormValid = email.includes('@') && password.length >= 6 && (isLogin || fullName.length > 2);
 
   const handleAuthAction = async () => {
     if (!isFormValid) return;

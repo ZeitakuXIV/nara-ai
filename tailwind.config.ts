@@ -19,9 +19,6 @@ const config: Config = {
         "nara-text": "#1E293B",
         "nara-muted": "#64748B",
       },
-      backgroundImage: {
-        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(61, 100, 77, 0.1) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(61, 100, 77, 0.05) 0px, transparent 50%)',
-      },
       animation: {
         'blob': "blob 7s infinite",
         'float': 'float 4s ease-in-out infinite',

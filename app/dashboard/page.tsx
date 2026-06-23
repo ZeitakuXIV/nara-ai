@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
+import { User, ShieldCheck, Utensils, Zap, Target, RefreshCw, X, Check, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMI, calculateBMR, calculateTDEE, calculateTargetMacros } from '@/utils/nutrition';
@@ -94,10 +94,12 @@ export default function Dashboard() {
     }
   }, [store.mealPlan, store.isOnboarded]);
 
-  const bmi = useMemo(() => calculateBMI(store.weight, store.height), [store.weight, store.height]);
-  const bmr = useMemo(() => calculateBMR(store.weight, store.height, store.age, store.gender), [store]);
-  const tdee = useMemo(() => calculateTDEE(bmr, store.activity), [bmr, store.activity]);
-  const targetMacros = useMemo(() => calculateTargetMacros(tdee, store.goal, bmi, bmr), [tdee, store.goal, bmi, bmr]);
+  const targetMacros = useMemo(() => {
+    const bmi = calculateBMI(store.weight, store.height);
+    const bmr = calculateBMR(store.weight, store.height, store.age, store.gender);
+    const tdee = calculateTDEE(bmr, store.activity);
+    return calculateTargetMacros(tdee, store.goal, bmi, bmr);
+  }, [store.weight, store.height, store.age, store.gender, store.activity, store.goal]);
 
   const currentMealIndex = weeklyPlanIndices[selectedDayIndex];
   // Strictly use the Local persistence (mealPlan) as default

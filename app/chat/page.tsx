@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Send, User, MoreVertical, Plus, Calendar, ShieldCheck, Loader2, Target } from 'lucide-react';
+import { Send, User, MoreVertical, Plus, ShieldCheck, Loader2, Target } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 
 interface Message {

@@ -1,44 +1,11 @@
 from google.adk.agents import LlmAgent
-from google.adk.tools import agent_tool
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools import url_context
-
-# NOTE: This agent will use Vertex AI if GOOGLE_APPLICATION_CREDENTIALS 
-# is set in the environment, which is handled in api.py loading .env.local
-
-nara_google_search_agent = LlmAgent(
-  name='NARA_google_search_agent',
-  model='gemini-2.5-flash', # Standardizing to 1.5-flash for better Vertex compatibility
-  description=(
-      'Agent specialized in performing Google searches.'
-  ),
-  sub_agents=[],
-  instruction='Use the GoogleSearchTool to find information on the web.',
-  tools=[
-    GoogleSearchTool()
-  ],
-)
-
-nara_url_context_agent = LlmAgent(
-  name='NARA_url_context_agent',
-  model='gemini-2.5-flash',
-  description=(
-      'Agent specialized in fetching content from URLs.'
-  ),
-  sub_agents=[],
-  instruction='Use the UrlContextTool to retrieve content from provided URLs.',
-  tools=[
-    url_context
-  ],
-)
 
 root_agent = LlmAgent(
   name='NARA',
   model='gemini-2.5-flash',
-  description=(
-      'This is Nara Agent. Nara stands for Nutriton-Adaptive-Reasoning-Agent'
-  ),
-  sub_agents=[],
+  description='Nutrition-Adaptive-Reasoning-Agent',
   instruction="""# IDENTITAS & PERAN
 Nama kamu adalah NARA (Nutrition Adaptive Reasoning Agent).
 Kamu adalah asisten kecerdasan buatan ahli gizi yang beroperasi di Indonesia.
@@ -78,7 +45,7 @@ Kamu BUKAN seorang dokter. Ini adalah aturan keamanan absolut yang tidak boleh d
 2. ATURAN 3X MAKAN: Ingatkan pengguna (jika relevan) bahwa rencana makan yang disusun NARA dirancang dengan konsep: 1 jenis menu utama yang dimakan 3 kali sehari (Sarapan, Makan Siang, Makan Malam) untuk memastikan kepraktisan dan pemenuhan target nutrisi harian secara presisi.
 3. PERSONALISASI: Berikan saran bagaimana cara memvariasikan menu tersebut (misal: cara memasak yang berbeda) agar pengguna tidak bosan meskipun memakan menu yang sama dalam satu hari.""",
   tools=[
-    agent_tool.AgentTool(agent=nara_google_search_agent),
-    agent_tool.AgentTool(agent=nara_url_context_agent)
+    GoogleSearchTool(),
+    url_context
   ],
 )

@@ -3,59 +3,25 @@ import re
 import json
 import os
 
-def get_unit_map():
-    # Standard conversion to grams (approximate)
-    return {
-        'cup': 240,
-        'cups': 240,
-        'tablespoon': 15,
-        'tablespoons': 15,
-        'tbsp': 15,
-        'teaspoon': 5,
-        'teaspoons': 5,
-        'tsp': 5,
-        'pound': 453.6,
-        'pounds': 453.6,
-        'lb': 453.6,
-        'lbs': 453.6,
-        'ounce': 28.35,
-        'ounces': 28.35,
-        'oz': 28.35,
-        'gram': 1,
-        'grams': 1,
-        'g': 1,
-        'kg': 1000,
-        'kilogram': 1000,
-        'piece': 100, # Default for things like '1 chicken'
-        'pieces': 100,
-        'clove': 5,
-        'cloves': 5,
-        'inch': 10,
-        'inches': 10,
-        
-        # Indonesian Bilingual Mappings
-        'sdm': 15,
-        'sdt': 5,
-        'siung': 5,
-        'butir': 100,
-        'buah': 100,
-        'biji': 100,
-        'ekor': 100,
-        'batang': 100,
-        'lembar': 100,
-        'ikat': 100,
-        'ruas': 50,
-        'jari': 50,
-        'bungkus': 150,
-        'gelas': 240,
-        'mangkok': 400,
-        'liter': 1000,
-        'l': 1000,
-        'ml': 1,
-        'gr': 1,
-        'sendok makan': 15,
-        'sendok teh': 5
-    }
+UNIT_MAP = {
+    'cup': 240, 'cups': 240,
+    'tablespoon': 15, 'tablespoons': 15, 'tbsp': 15,
+    'teaspoon': 5, 'teaspoons': 5, 'tsp': 5,
+    'pound': 453.6, 'pounds': 453.6, 'lb': 453.6, 'lbs': 453.6,
+    'ounce': 28.35, 'ounces': 28.35, 'oz': 28.35,
+    'gram': 1, 'grams': 1, 'g': 1,
+    'kg': 1000, 'kilogram': 1000,
+    'piece': 100, 'pieces': 100,
+    'clove': 5, 'cloves': 5,
+    'inch': 10, 'inches': 10,
+    'sdm': 15, 'sdt': 5,
+    'siung': 5, 'butir': 100, 'buah': 100, 'biji': 100,
+    'ekor': 100, 'batang': 100, 'lembar': 100, 'ikat': 100,
+    'ruas': 50, 'jari': 50, 'bungkus': 150,
+    'gelas': 240, 'mangkok': 400,
+    'liter': 1000, 'l': 1000, 'ml': 1, 'gr': 1,
+    'sendok makan': 15, 'sendok teh': 5
+}
 
 def parse_ingredient_line(line_orig):
     line = line_orig.lower().strip()
@@ -99,10 +65,9 @@ def parse_ingredient_line(line_orig):
         remainder = line[len(match_qty.group(0)):].strip()
         
         # Check for unit
-        unit_map = get_unit_map()
         found_unit = False
         # Sort units by length descending to match longest first (e.g. 'tablespoons' before 'tablespoon')
-        for u in sorted(unit_map.keys(), key=len, reverse=True):
+        for u in sorted(UNIT_MAP.keys(), key=len, reverse=True):
             if remainder.startswith(u + " ") or remainder == u:
                 unit = u
                 item = remainder[len(u):].strip()
@@ -142,8 +107,7 @@ def parse_ingredient_line(line_orig):
         return None
         
     # Convert to grams
-    unit_map = get_unit_map()
-    gram_weight = qty * unit_map.get(unit, 100 if unit == 'unit' else 1) # Default 100g for '1 piece'
+    gram_weight = qty * UNIT_MAP.get(unit, 100 if unit == 'unit' else 1) # Default 100g for '1 piece'
     
     return {
         "raw": line_orig.strip(),

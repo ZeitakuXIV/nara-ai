@@ -3,21 +3,11 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart, MapPin, ChevronDown, Check } from 'lucide-react';
+import { ArrowRight, ChevronLeft, User, Ruler, Weight, Coffee, Footprints, Dumbbell, Zap, ShieldCheck, Heart, MapPin, ChevronDown, Check, X } from 'lucide-react';
 import { useUserStore, Recipe } from '@/store/userStore';
 import { calculateBMI, getBmiStatus } from '@/utils/nutrition';
+import { INDONESIAN_PROVINCES } from '@/constants';
 import { supabase } from '@/utils/supabase';
-
-const INDONESIAN_PROVINCES = [
-  "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", 
-  "Gorontalo", "Jambi", "Jawa Barat", "Jawa Tengah", "Jawa Timur", 
-  "Kalimantan Barat", "Kalimantan Selatan", "Kalimantan Tengah", "Kalimantan Timur", "Kalimantan Utara", 
-  "Kepulauan Bangka Belitung", "Kepulauan Riau", "Lampung", "Maluku", "Maluku Utara", 
-  "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Papua", "Papua Barat", "Papua Barat Daya", 
-  "Papua Pegunungan", "Papua Selatan", "Papua Tengah", "Riau", "Sulawesi Barat", 
-  "Sulawesi Selatan", "Sulawesi Tengah", "Sulawesi Tenggara", "Sulawesi Utara", 
-  "Sumatera Barat", "Sumatera Selatan", "Sumatera Utara"
-];
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -49,13 +39,12 @@ export default function Onboarding() {
 
   const handleGeneratePlan = async () => {
     // CLINICAL CROSS-VALIDATION
-    const currentBmi = calculateBMI(store.weight, store.height);
-    if (store.goal === 'cutting' && currentBmi < 18.5) {
+    if (store.goal === 'cutting' && bmi < 18.5) {
       setClinicalError("Clinical Safety: BMI Anda < 18.5 (Underweight). Melakukan program Cutting (Defisit Kalori) dalam kondisi ini berbahaya secara medis. Harap pilih Maintenance atau Bulking.");
       setTimeout(() => setClinicalError(null), 8000);
       return;
     }
-    if (store.goal === 'bulking' && currentBmi >= 30.0) {
+    if (store.goal === 'bulking' && bmi >= 30.0) {
       setClinicalError("Clinical Safety: BMI Anda >= 30.0 (Obese). Melakukan program Bulking (Surplus Kalori) meningkatkan risiko kardiovaskular. Fokuslah pada penurunan lemak (Cutting) terlebih dahulu.");
       setTimeout(() => setClinicalError(null), 8000);
       return;
@@ -348,8 +337,4 @@ export default function Onboarding() {
   );
 }
 
-function X(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-  );
-}
+

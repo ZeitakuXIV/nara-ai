@@ -1,6 +1,5 @@
 import pandas as pd
 import os
-import re
 
 def clean_text_fractions(text):
     if not isinstance(text, str):

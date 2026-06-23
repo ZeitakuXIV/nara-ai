@@ -20,18 +20,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
+import { calculateBMI } from '@/utils/nutrition';
+import { INDONESIAN_PROVINCES } from '@/constants';
 import { supabase } from '@/utils/supabase';
-
-const INDONESIAN_PROVINCES = [
-  "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", 
-  "Gorontalo", "Jambi", "Jawa Barat", "Jawa Tengah", "Jawa Timur", 
-  "Kalimantan Barat", "Kalimantan Selatan", "Kalimantan Tengah", "Kalimantan Timur", "Kalimantan Utara", 
-  "Kepulauan Bangka Belitung", "Kepulauan Riau", "Lampung", "Maluku", "Maluku Utara", 
-  "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Papua", "Papua Barat", "Papua Barat Daya", 
-  "Papua Pegunungan", "Papua Selatan", "Papua Tengah", "Riau", "Sulawesi Barat", 
-  "Sulawesi Selatan", "Sulawesi Tengah", "Sulawesi Tenggara", "Sulawesi Utara", 
-  "Sumatera Barat", "Sumatera Selatan", "Sumatera Utara"
-];
 
 export default function Profile() {
   const store = useUserStore();
@@ -40,8 +31,7 @@ export default function Profile() {
   const [clinicalError, setClinicalError] = useState<string | null>(null);
 
   const handleDownloadData = () => {
-    // UU PDP No. 27/2022 Art. 5 Compliance: User data portability right
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+    const data = {
       app: "NARA AI",
       law_compliance: "UU PDP No. 27/2022 Art. 5 (Right to Data Portability)",
       exported_at: new Date().toISOString(),
@@ -59,21 +49,17 @@ export default function Profile() {
         dietary_goal: store.goal
       },
       meal_plan: store.mealPlan
-    }, null, 2));
-    
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `nara_ai_user_data.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nara_ai_user_data.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const bmi = useMemo(() => {
-    const heightInMeters = store.height / 100;
-    if (!heightInMeters) return 0;
-    return parseFloat((store.weight / (heightInMeters * heightInMeters)).toFixed(1));
-  }, [store.height, store.weight]);
+  const bmi = useMemo(() => calculateBMI(store.weight, store.height), [store.weight, store.height]);
 
   const handleDeployChanges = async () => {
     // CLINICAL CROSS-VALIDATION
