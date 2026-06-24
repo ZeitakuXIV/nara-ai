@@ -1,11 +1,18 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 
 export default function PrivacyPage() {
+  const router = useRouter();
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-white via-nara-cream to-nara-mint/20 px-6 py-20 max-w-3xl mx-auto">
+    <main className="h-screen overflow-y-auto bg-gradient-to-br from-white via-nara-cream to-nara-mint/20 px-6 py-20 max-w-3xl mx-auto">
       <div className="glass-container p-10 shadow-lg space-y-8">
         <div>
-          <Link href="/onboarding" className="text-[11px] font-black text-nara-hunter uppercase tracking-widest hover:opacity-70 transition-opacity">&larr; Back</Link>
+          <button onClick={() => router.back()} className="text-[11px] font-black text-nara-hunter uppercase tracking-widest hover:opacity-70 transition-opacity flex items-center gap-1">
+            <ArrowLeft size={14} /> Back
+          </button>
           <h1 className="text-3xl font-black text-nara-text tracking-tight mt-4">Privacy Policy</h1>
           <p className="text-[10px] text-nara-muted font-bold uppercase tracking-widest mt-2">Effective Date: {new Date().toLocaleDateString('en-CA')}</p>
         </div>
