@@ -173,4 +173,3 @@ Full bias analysis with code, visualizations, and verifiable claims:
 - **Valensius Alven** – Full-Stack & UI/UX Engineering
 
 ---
-*Developed at Universitas Padjadjaran — Informatics Engineering Study Program.*
