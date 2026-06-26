@@ -80,6 +80,16 @@ export default function Profile() {
     }
   };
 
+  const handleFullRecalibration = () => {
+    const confirmed = window.confirm(
+      "Reset Biometrics\n\nThis will clear your local profile data and redirect you to the onboarding screen. Your account and saved data on the server will NOT be affected.\n\nContinue?"
+    );
+    if (!confirmed) return;
+    store.resetProfile();
+    localStorage.removeItem('nara-user-storage');
+    router.push('/onboarding');
+  };
+
   const bmi = useMemo(() => calculateBMI(store.weight, store.height), [store.weight, store.height]);
 
   const handleDeployChanges = async () => {
@@ -283,8 +293,8 @@ export default function Profile() {
              {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
              {isSaving ? 'Saving...' : 'Deploy Changes'}
            </button>
-           <button onClick={handleDownloadData} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><Download size={16} /> Download My Data (UU PDP)</button>
-            <button onClick={() => store.resetProfile()} className="flex items-center justify-center gap-2 text-rose-500 font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
+            <button onClick={handleDownloadData} className="flex items-center justify-center gap-2 text-nara-hunter font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><Download size={16} /> Download My Data (UU PDP)</button>
+            <button onClick={handleFullRecalibration} className="flex items-center justify-center gap-2 text-rose-500 font-black text-[11px] uppercase tracking-widest py-4 bg-white/40 rounded-2xl border border-white/60 shadow-sm"><RotateCcw size={16} /> Full Bio-Recalibration</button>
             <button onClick={handleDeleteAccount} className="flex items-center justify-center gap-2 text-red-600 font-black text-[11px] uppercase tracking-widest py-4 bg-red-50 rounded-2xl border border-red-200 shadow-sm"><Trash2 size={16} /> Delete Account & All Data</button>
          </div>
       </main>

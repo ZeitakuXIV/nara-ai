@@ -22,9 +22,9 @@ venv/
 .env*.local
 
 # Large Raw Datasets (Strictly ignored)
+ai-engine/datasets/nutrition/
 ai-engine/datasets/allergen2/
 ai-engine/datasets/allergen3/
-ai-engine/datasets/nutrition/
 ai-engine/datasets/recipe2/
 ai-engine/datasets/recipe3/
 ai-engine/datasets/recipe4/
@@ -34,6 +34,10 @@ ai-engine/datasets/retention/*.pdf
 # Keep Master Datasets (Cleaned)
 !ai-engine/datasets/master/
 .vercel
+
+# Generated docs output
+docs/*.pdf
+docs/*.docx
 
 # Security
 secrets/
